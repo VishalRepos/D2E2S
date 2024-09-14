@@ -27,7 +27,7 @@ class D2E2S_Trainer(BaseTrainer):
     def __init__(self, args: argparse.Namespace):
         super().__init__(args)
 
-        self._tokenizer = BertTokenizer.from_pretrained(args.pretrained_bert_name, do_lower_case=args.lowercase)
+        self._tokenizer = BertTokenizer.from_pretrained('./bert-base-uncased', do_lower_case=args.lowercase)
         self._predictions_path = os.path.join(self._log_path_predict, 'predicted_%s_epoch_%s.json')
         self._examples_path = os.path.join(self._log_path_predict, 'sample_%s_%s_epoch_%s.html')
         os.makedirs(self._log_path_result)

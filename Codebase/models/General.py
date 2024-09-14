@@ -1,5 +1,5 @@
 import torch
-import np
+import numpy as np
 
 def set_seed(SEED):
     np.random.seed(SEED)
