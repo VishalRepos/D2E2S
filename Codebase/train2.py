@@ -10,8 +10,6 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import AdamW, BertConfig
 from transformers import BertTokenizer
-from transformers import DebertaTokenizer, DebertaModel
-from transformers import AutoTokenizer, AutoModelForTokenClassification
 
 from Parameter import train_argparser
 from models.D2E2S_Model import D2E2SModel
@@ -29,15 +27,11 @@ class D2E2S_Trainer(BaseTrainer):
     def __init__(self, args: argparse.Namespace):
         super().__init__(args)
 
-        self._tokenizer = AutoTokenizer.from_pretrained("nbroad/deberta-v3-base-orgs-v3")
-
+        self._tokenizer = BertTokenizer.from_pretrained('./bert-base-uncased', do_lower_case=args.lowercase)
         self._predictions_path = os.path.join(self._log_path_predict, 'predicted_%s_epoch_%s.json')
-
         self._examples_path = os.path.join(self._log_path_predict, 'sample_%s_%s_epoch_%s.html')
-
-        os.makedirs(self._log_path_result, exist_ok=True)
-
-        os.makedirs(self._log_path_predict, exist_ok=True)
+        os.makedirs(self._log_path_result)
+        os.makedirs(self._log_path_predict)
         self.max_pair_f1 = 40
         self.result_path = os.path.join(self._log_path_result, "result{}.txt".format(self.args.max_span_size))
 
