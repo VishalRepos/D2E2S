@@ -12,6 +12,7 @@ from transformers import AdamW, BertConfig
 from transformers import BertTokenizer
 from transformers import DebertaTokenizer, DebertaModel
 from transformers import AutoTokenizer, AutoModelForTokenClassification
+from transformers import DebertaConfig, DebertaModel
 
 from Parameter import train_argparser
 from models.D2E2S_Model import D2E2SModel
@@ -74,13 +75,9 @@ class D2E2S_Trainer(BaseTrainer):
         test_dataset = input_reader.get_dataset(test_label)
 
         # load model
-        config = BertConfig.from_pretrained(self.args.pretrained_bert_name, from_tf=True)
-        model = D2E2SModel.from_pretrained(self.args.pretrained_bert_name,
-                                           config=config,
-                                           cls_token=self._tokenizer.convert_tokens_to_ids('[CLS]'),
-                                           sentiment_types=input_reader.sentiment_type_count - 1,
-                                           entity_types=input_reader.entity_type_count,
-                                           args = args
+        config = DebertaConfig.from_pretrained(self.args.pretrained_bert_name, from_tf=True)
+        model = DebertaModel.from_pretrained(self.args.pretrained_bert_name,
+                                           config=config
                                            )
         model.to(args.device)
         # create optimizer
