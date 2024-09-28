@@ -12,6 +12,7 @@ from transformers import AdamW, BertConfig
 from transformers import BertTokenizer
 from transformers import DebertaTokenizer, DebertaModel
 from transformers import AutoTokenizer, AutoModelForTokenClassification
+from transformers import AutoConfig, AutoModel
 from transformers import DebertaConfig, DebertaModel
 
 from Parameter import train_argparser
