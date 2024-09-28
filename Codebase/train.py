@@ -75,10 +75,9 @@ class D2E2S_Trainer(BaseTrainer):
         test_dataset = input_reader.get_dataset(test_label)
 
         # load model
-        config = DebertaConfig.from_pretrained(self.args.pretrained_bert_name, from_tf=True)
-        model = DebertaModel.from_pretrained(self.args.pretrained_bert_name,
-                                           config=config
-                                           )
+
+        config = AutoConfig.from_pretrained("microsoft/deberta-v3-base")
+        model = AutoModel.from_pretrained("microsoft/deberta-v3-base", config=config)
         model.to(args.device)
         # create optimizer
         optimizer_params = self._get_optimizer_params(model)
