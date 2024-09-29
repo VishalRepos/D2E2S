@@ -1,7 +1,6 @@
 from transformers import BertModel
 from transformers import BertPreTrainedModel
 from transformers import BertConfig
-from transformers import DebertaV3Model, DebertaV3PreTrainedModel, DebertaV3Config
 from torch import nn as nn
 import torch
 from trainer import util, sampling
@@ -32,9 +31,9 @@ def get_token(h: torch.tensor, x: torch.tensor, token: int):
 
     return token_h
 
-class D2E2SModel(DebertaV3PreTrainedModel):
+class D2E2SModel(BertPreTrainedModel):
     VERSION = '1.1'
-    def __init__(self, config: DebertaV3Config, cls_token: int, sentiment_types: int, entity_types: int, args):
+    def __init__(self, config: BertConfig, cls_token: int, sentiment_types: int, entity_types: int, args):
         super(D2E2SModel, self).__init__(config)
         # 1、parameters init
         self.args = args
@@ -55,8 +54,8 @@ class D2E2SModel(DebertaV3PreTrainedModel):
         self.gcn_dim = self.args.gcn_dim
         self.gcn_dropout = self.args.gcn_dropout
 
-        # 2、DebertaV3 model
-        self.deberta = DebertaV3Model(config)
+        # 2、BERT model
+        self.bert = BertModel(config)
         # self.BertAdapterModel = BertAdapterModel(config)
         self.Syn_gcn = GCN()
         self.Sem_gcn = SemGCN(self.args)
@@ -133,7 +132,7 @@ class D2E2SModel(DebertaV3PreTrainedModel):
 
         # encoder layer
         # h = self.BertAdapterModel(input_ids=encodings, attention_mask=self.context_masks)[0]
-        h = self.deberta(input_ids=encodings, attention_mask=self.context_masks)[0]
+        h = self.bert(input_ids=encodings, attention_mask=self.context_masks)[0]
         self.output, _ = self.lstm(h, self.hidden)
         self.bert_lstm_output = self.lstm_dropout(self.output)
         self.bert_lstm_att_feature = self.bert_lstm_output
@@ -182,7 +181,7 @@ class D2E2SModel(DebertaV3PreTrainedModel):
 
         # encoder layer
         # h = self.BertAdapterModel(input_ids=encodings, attention_mask=self.context_masks)[0]
-        h = self.deberta(input_ids=encodings, attention_mask=self.context_masks)[0]
+        h = self.bert(input_ids=encodings, attention_mask=self.context_masks)[0]
         self.output, _ = self.lstm(h, self.hidden)
         self.bert_lstm_output = self.lstm_dropout(self.output)
         self.bert_lstm_att_feature = self.bert_lstm_output
