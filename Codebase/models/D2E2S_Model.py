@@ -2,6 +2,7 @@ from transformers import BertModel
 from transformers import BertPreTrainedModel
 from transformers import BertConfig
 from transformers import DebertaV3Model, DebertaV3PreTrainedModel, DebertaV3Config
+from transformers import AutoModel, AutoConfig, PreTrainedModel
 from torch import nn as nn
 import torch
 from trainer import util, sampling
@@ -32,9 +33,9 @@ def get_token(h: torch.tensor, x: torch.tensor, token: int):
 
     return token_h
 
-class D2E2SModel(DebertaV3PreTrainedModel):
+class D2E2SModel(PreTrainedModel):
     VERSION = '1.1'
-    def __init__(self, config: DebertaV3Config, cls_token: int, sentiment_types: int, entity_types: int, args):
+    def __init__(self, config, cls_token: int, sentiment_types: int, entity_types: int, args):
         super(D2E2SModel, self).__init__(config)
         # 1、parameters init
         self.args = args
@@ -56,7 +57,8 @@ class D2E2SModel(DebertaV3PreTrainedModel):
         self.gcn_dropout = self.args.gcn_dropout
 
         # 2、DebertaV3 model
-        self.deberta = DebertaV3Model(config)
+        # self.deberta = DebertaV3Model(config)
+        self.deberta = AutoModel.from_pretrained("microsoft/deberta-v3-base", config=config)
         # self.BertAdapterModel = BertAdapterModel(config)
         self.Syn_gcn = GCN()
         self.Sem_gcn = SemGCN(self.args)
