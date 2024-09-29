@@ -123,9 +123,13 @@ class D2E2S_Trainer(BaseTrainer):
             batch = util.to_device(batch, arg_parser.device)
 
             # forward step
-            entity_logits, senti_logits, batch_loss = model(encodings=batch['encodings'], context_masks=batch['context_masks'],
-                                              entity_masks=batch['entity_masks'], entity_sizes=batch['entity_sizes'],
-                                              sentiments=batch['rels'], senti_masks=batch['senti_masks'], adj=batch['adj'])
+            entity_logits, senti_logits, batch_loss = model(input_ids=batch['encodings'], 
+                                                            attention_mask=batch['context_masks'],
+                                                            entity_masks=batch['entity_masks'], 
+                                                            entity_sizes=batch['entity_sizes'],
+                                                            sentiments=batch['rels'], 
+                                                            senti_masks=batch['senti_masks'], 
+                                                            adj=batch['adj'])
 
             # compute loss and optimize parameters
             epoch_loss = compute_loss.compute(entity_logits=entity_logits, senti_logits=senti_logits, batch_loss=batch_loss,
