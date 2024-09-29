@@ -123,8 +123,7 @@ class D2E2SModel(PreTrainedModel):
         self.TIN = TIN(self.bert_feature_dim)
         # self.TextCentredSP = TextCentredSP(self.bert_feature_dim*2, self.shared_dim, self.private_dim)
 
-    def _forward_train(self, input_ids: torch.tensor, attention_mask: torch.tensor, entity_masks: torch.tensor,
-                       entity_sizes: torch.tensor, sentiments: torch.tensor, senti_masks: torch.tensor, adj):
+    def _forward_train(self, h, attention_mask, entity_masks, entity_sizes, sentiments, senti_masks, adj):
 
         # Parameters init
         context_masks = context_masks.float()
@@ -174,8 +173,8 @@ class D2E2SModel(PreTrainedModel):
 
         return entity_clf, senti_clf, batch_loss
 
-    def _forward_eval(self, input_ids: torch.tensor, attention_mask: torch.tensor, entity_masks: torch.tensor,
-                      entity_sizes: torch.tensor, entity_spans: torch.tensor, entity_sample_masks: torch.tensor, adj):
+    def _forward_eval(self, h, attention_mask, entity_masks, entity_sizes, entity_spans, entity_sample_masks, adj):
+
         context_masks = context_masks.float()
         self.context_masks = context_masks
         batch_size = encodings.shape[0]
@@ -359,13 +358,18 @@ class D2E2SModel(PreTrainedModel):
         return batch_sentiments, batch_senti_masks, batch_senti_sample_masks
 
     def forward(self, input_ids=None, attention_mask=None, entity_masks=None, entity_sizes=None, 
-                sentiments=None, senti_masks=None, adj=None, entity_spans=None, 
-                entity_sample_masks=None, evaluate=False):
+            sentiments=None, senti_masks=None, adj=None, entity_spans=None, 
+            entity_sample_masks=None, evaluate=False):
+
+        # First, get the DeBERTa output
+        deberta_output = self.deberta(input_ids=input_ids, attention_mask=attention_mask)[0]
+    
+        # Then, pass this output along with other arguments to your custom methods
         if not evaluate:
-            return self._forward_train(input_ids, attention_mask, entity_masks, entity_sizes, 
+            return self._forward_train(deberta_output, attention_mask, entity_masks, entity_sizes, 
                                     sentiments, senti_masks, adj)
         else:
-            return self._forward_eval(input_ids, attention_mask, entity_masks, entity_sizes, 
+            return self._forward_eval(deberta_output, attention_mask, entity_masks, entity_sizes, 
                                     entity_spans, entity_sample_masks, adj)
 
 def compute_loss(p, q, k):
