@@ -11,8 +11,8 @@ from tqdm import tqdm
 from transformers import AdamW, BertConfig
 from transformers import BertTokenizer
 from transformers import DebertaTokenizer, DebertaModel
-from transformers import AutoTokenizer, AutoModelForTokenClassification
-from transformers import AutoConfig, AutoModel
+from transformers import AutoModelForTokenClassification
+from transformers import AutoTokenizer, AutoConfig, AutoModel
 from transformers import DebertaConfig, DebertaModel
 
 from Parameter import train_argparser
@@ -31,7 +31,7 @@ class D2E2S_Trainer(BaseTrainer):
     def __init__(self, args: argparse.Namespace):
         super().__init__(args)
 
-        self._tokenizer = AutoTokenizer.from_pretrained("nbroad/deberta-v3-base-orgs-v3")
+        self._tokenizer = AutoTokenizer.from_pretrained("microsoft/deberta-v3-base")
 
         self._predictions_path = os.path.join(self._log_path_predict, 'predicted_%s_epoch_%s.json')
 
