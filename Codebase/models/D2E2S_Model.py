@@ -109,7 +109,7 @@ class D2E2SModel(PreTrainedModel):
             print("Freeze transformer weights")
 
             # freeze all transformer weights
-            for param in self.bert.parameters():
+            for param in self.deberta.parameters():
                 param.requires_grad = False
 
         # # 7、Mutual Biaffine Model
@@ -126,36 +126,36 @@ class D2E2SModel(PreTrainedModel):
     def _forward_train(self, h, attention_mask, entity_masks, entity_sizes, sentiments, senti_masks, adj):
 
         # Parameters init
-        context_masks = context_masks.float()
-        self.context_masks = context_masks
-        batch_size = encodings.shape[0]
-        seq_lens = encodings.shape[1]
+        attention_mask = attention_mask.float()
+        self.attention_mask = attention_mask
+        batch_size = h.shape[0]
+        seq_lens = h.shape[1]
 
         # encoder layer
-        # h = self.BertAdapterModel(input_ids=encodings, attention_mask=self.context_masks)[0]
+        # h = self.BertAdapterModel(input_ids=input_ids, attention_mask=self.attention_mask)[0]
         h = self.deberta(input_ids=input_ids, attention_mask=attention_mask)[0]
         self.output, _ = self.lstm(h, self.hidden)
         self.bert_lstm_output = self.lstm_dropout(self.output)
         self.bert_lstm_att_feature = self.bert_lstm_output
 
         # attention layers
-        # bert_lstm_feature_attention = self.attention_layer(self.bert_lstm_output, self.bert_lstm_output, self.context_masks[:,:seq_lens])
+        # bert_lstm_feature_attention = self.attention_layer(self.bert_lstm_output, self.bert_lstm_output, self.attention_mask[:,:seq_lens])
         # self.bert_lstm_att_feature = self.bert_lstm_output + bert_lstm_feature_attention
 
         # gcn layer
         h_syn_ori, pool_mask_origin = self.Syn_gcn(adj, h)
         h_syn_gcn, pool_mask = self.Syn_gcn(adj, self.bert_lstm_att_feature)
-        h_sem_ori, adj_sem_ori = self.Sem_gcn(h, encodings, seq_lens)
-        h_sem_gcn, adj_sem_gcn = self.Sem_gcn(self.bert_lstm_att_feature, encodings, seq_lens)
+        h_sem_ori, adj_sem_ori = self.Sem_gcn(h, input_ids, seq_lens)
+        h_sem_gcn, adj_sem_gcn = self.Sem_gcn(self.bert_lstm_att_feature, input_ids, seq_lens)
 
         # fusion layer
         h1 = self.TIN(h, h_syn_ori, h_syn_gcn, h_sem_ori, h_sem_gcn, adj_sem_ori, adj_sem_gcn)
-        h = self.attention_layer(h1, h1, self.context_masks[:, :seq_lens]) + h1
+        h = self.attention_layer(h1, h1, self.attention_mask[:, :seq_lens]) + h1
         # h_feature, h_syn_origin, h_syn_feature, h_sem_origin, h_sem_feature = self.TIN(h, h_syn_ori, h_syn_gcn, h_sem_ori, h_sem_gcn)
         # h = self.TextCentredSP(h_syn_feature, h_sem_feature)
 
         size_embeddings = self.size_embeddings(entity_sizes)
-        entity_clf, entity_spans_pool = self._classify_entities(encodings, h, entity_masks, size_embeddings, self.args)
+        entity_clf, entity_spans_pool = self._classify_entities(input_ids, h, entity_masks, size_embeddings, self.args)
 
         # relation_classify
         h_large = h.unsqueeze(1).repeat(1, max(min(sentiments.shape[1], self._max_pairs), 1), 1, 1)
@@ -175,41 +175,41 @@ class D2E2SModel(PreTrainedModel):
 
     def _forward_eval(self, h, attention_mask, entity_masks, entity_sizes, entity_spans, entity_sample_masks, adj):
 
-        context_masks = context_masks.float()
-        self.context_masks = context_masks
-        batch_size = encodings.shape[0]
-        seq_lens = encodings.shape[1]
+        attention_mask = attention_mask.float()
+        self.attention_mask = attention_mask
+        batch_size = input_ids.shape[0]
+        seq_lens = input_ids.shape[1]
 
         # encoder layer
-        # h = self.BertAdapterModel(input_ids=encodings, attention_mask=self.context_masks)[0]
-        h = self.deberta(input_ids=encodings, attention_mask=self.context_masks)[0]
+        # h = self.BertAdapterModel(input_ids=input_ids, attention_mask=self.attention_mask)[0]
+        h = self.deberta(input_ids=input_ids, attention_mask=attention_mask)[0]
         self.output, _ = self.lstm(h, self.hidden)
         self.bert_lstm_output = self.lstm_dropout(self.output)
         self.bert_lstm_att_feature = self.bert_lstm_output
 
         # attention layers
-        # bert_lstm_feature_attention = self.attention_layer(self.bert_lstm_output, self.bert_lstm_output, self.context_masks[:,:seq_lens])
+        # bert_lstm_feature_attention = self.attention_layer(self.bert_lstm_output, self.bert_lstm_output, self.attention_mask[:,:seq_lens])
         # self.bert_lstm_att_feature = self.bert_lstm_output + bert_lstm_feature_attention
         # self.bert_lstm_att_feature = bert_lstm_feature_attention
 
         # gcn layer
         h_syn_ori, pool_mask_origin = self.Syn_gcn(adj, h)
         h_syn_gcn, pool_mask = self.Syn_gcn(adj, self.bert_lstm_att_feature)
-        h_sem_ori, adj_sem_ori = self.Sem_gcn(h, encodings, seq_lens)
-        h_sem_gcn, adj_sem_gcn = self.Sem_gcn(self.bert_lstm_att_feature, encodings, seq_lens)
+        h_sem_ori, adj_sem_ori = self.Sem_gcn(h, input_ids, seq_lens)
+        h_sem_gcn, adj_sem_gcn = self.Sem_gcn(self.bert_lstm_att_feature, input_ids, seq_lens)
 
         # fusion layer
         h1 = self.TIN(h, h_syn_ori, h_syn_gcn, h_sem_ori, h_sem_gcn, adj_sem_ori, adj_sem_gcn)
-        h = self.attention_layer(h1, h1, self.context_masks[:, :seq_lens]) + h1
+        h = self.attention_layer(h1, h1, self.attention_mask[:, :seq_lens]) + h1
         # h_feature, h_syn_origin, h_syn_feature, h_sem_origin, h_sem_feature = self.TIN(h, h_syn_ori, h_syn_gcn, h_sem_ori, h_sem_gcn)
         # h = self.TextCentredSP(h_syn_feature, h_sem_feature)
 
         # entity_classify
         size_embeddings = self.size_embeddings(entity_sizes)  # embed entity candidate sizes
-        entity_clf, entity_spans_pool = self._classify_entities(encodings, h, entity_masks, size_embeddings, self.args)
+        entity_clf, entity_spans_pool = self._classify_entities(input_ids, h, entity_masks, size_embeddings, self.args)
 
         # ignore entity candidates that do not constitute an actual entity for sentiments (based on classifier)
-        ctx_size = context_masks.shape[-1]
+        ctx_size = attention_mask.shape[-1]
         sentiments, senti_masks, senti_sample_masks = self._filter_spans(entity_clf, entity_spans,
                                                                     entity_sample_masks, ctx_size)
         senti_sample_masks = senti_sample_masks.float().unsqueeze(-1)
@@ -234,7 +234,7 @@ class D2E2SModel(PreTrainedModel):
 
         return entity_clf, senti_clf, sentiments
 
-    def _classify_entities(self, encodings, h, entity_masks, size_embeddings, args):
+    def _classify_entities(self, input_ids, h, entity_masks, size_embeddings, args):
         # entity_masks: tensor(4,132,24) 4:batch_size, 132: entities count, 24: one sentence token count and one entity need 24 mask
         # size_embedding: tensor(4,132,25) 4：batch_size, 132:entities_size, 25:each entities Embedding Dimension
         # h: tensor(4,24,768) -> (4,1,24,768) -> (4,132,24,768)
@@ -252,7 +252,7 @@ class D2E2SModel(PreTrainedModel):
                 entity_spans_pool = entity_spans_pool.mean(dim=2, keepdim=True).squeeze(-2)
 
         # get cls token as candidate context representation
-        entity_ctx = get_token(h, encodings, self._cls_token)
+        entity_ctx = get_token(h, input_ids, self._cls_token)
 
         # create candidate representations including context, max pooled span and size embedding
         entity_repr = torch.cat([entity_ctx.unsqueeze(1).repeat(1, entity_spans_pool.shape[1], 1),
