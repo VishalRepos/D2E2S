@@ -8,9 +8,8 @@ import transformers
 from torch.optim import optimizer
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-from transformers import AdamW, BertConfig
-from transformers import BertTokenizer
-from transformers import DebertaTokenizer, DebertaModel
+from transformers import AdamW
+from transformers import DebertaModel
 from transformers import AutoModelForTokenClassification
 from transformers import AutoTokenizer, AutoConfig, AutoModel
 from transformers import DebertaConfig, DebertaModel
@@ -78,7 +77,8 @@ class D2E2S_Trainer(BaseTrainer):
         # load model
 
         config = AutoConfig.from_pretrained("microsoft/deberta-v3-base")
-        model = AutoModel.from_pretrained("microsoft/deberta-v3-base", config=config)
+        #model = AutoModel.from_pretrained("microsoft/deberta-v3-base", config=config)
+        model = D2E2SModel(config, cls_token, sentiment_types, entity_types, args)
         model.to(args.device)
         # create optimizer
         optimizer_params = self._get_optimizer_params(model)

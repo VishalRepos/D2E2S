@@ -3,11 +3,11 @@ from tqdm import tqdm
 from trainer import util
 from collections import OrderedDict
 from typing import List
-from transformers import BertTokenizer
+from transformers import DebertaV2Tokenizer as DebertaTokenizer
 from trainer.entities import Dataset,Entity,EntityType,Sentiment,sentimentType
 import numpy as np
 class JsonInputReader():
-    def __init__(self,types_path: str,tokenizer: BertTokenizer, neg_entity_count: int = None, neg_senti_count: int = None, max_span_size: int = None):
+    def __init__(self,types_path: str,tokenizer: AutoTokenizer, neg_entity_count: int = None, neg_senti_count: int = None, max_span_size: int = None):
 
         types = json.load(open(types_path), object_pairs_hook=OrderedDict)  # entity + sentiments types
         self._entity_types = OrderedDict()
@@ -111,35 +111,27 @@ class JsonInputReader():
                 ral[2]+=l
         return dependency
 
-    def _parse_tokens(self, jtokens,jdependency, dataset):
-        # print()
-        # print(jdependency)
+    def _parse_tokens(self, jtokens, jdependency, dataset):
         sen_tokens = []
-        # Full sentence encoding including special tokens ([CLS] and [SEP]) and byte pair encoding of the original token
-        sen_encoding = [self._tokenizer.convert_tokens_to_ids('[CLS]')]
+        sen_encoding = [self._tokenizer.cls_token_id]
         sen = ""
-        # parse tokens
         for i, token_phrase in enumerate(jtokens):
-            sen += token_phrase+" "
-
-            token_encoding = self._tokenizer.encode(token_phrase, add_special_tokens=False)
+            sen += token_phrase + " "
+            try:
+                token_encoding = self._tokenizer.encode(token_phrase, add_special_tokens=False)
+            except Exception as e:
+                print(f"Error tokenizing '{token_phrase}': {e}")
+                token_encoding = []
             span_start, span_end = (len(sen_encoding), len(sen_encoding) + len(token_encoding))
-
             token = dataset.create_token(i, span_start, span_end, token_phrase)
-
             sen_tokens.append(token)
             sen_encoding += token_encoding
-            # print(i, token_phrase,token_encoding)
-            l=len(token_encoding)
+            l = len(token_encoding)
             if l > 1:
-                idx = i+1
-                jdependency = self.change_dep(dependency=jdependency,idx=idx,l=l-1)
-        # print()
-        # print(">>>:",jdependency)
-
-        sen_encoding += [self._tokenizer.convert_tokens_to_ids('[SEP]')]
+                idx = i + 1
+                jdependency = self.change_dep(dependency=jdependency, idx=idx, l=l-1)
+        sen_encoding += [self._tokenizer.sep_token_id]
         adj = self.tree_to_adj(jdependency, len(sen_encoding))
-
         return sen_tokens, sen_encoding, adj
 
     def _parse_entities(self, jentities, doc_tokens, dataset) -> List[Entity]:

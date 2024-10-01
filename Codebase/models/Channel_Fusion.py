@@ -4,20 +4,19 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 def Orthographic_projection_fusion(feature1, feature2, feature3):
-    # Dimensionality reduction is performed on each feature to obtain a low-dimensional feature vector
-    pca = PCA(n_components=768)
-    feature1_vector = pca.fit_transform(feature1.view(-1, 768)).reshape(4, 24, -1)
-    feature2_vector = pca.fit_transform(feature2.view(-1, 768)).reshape(4, 24, -1)
-    feature3_vector = pca.fit_transform(feature3.view(-1, 768)).reshape(4, 24, -1)
-
-    # The vectors of all features are combined to obtain a combined feature vector
-    fused_feature_vector = torch.cat([feature1_vector, feature2_vector, feature3_vector], dim=-1)
-
-    # Projection of the integrated feature vector into a new space using the projection matrix selected by PCA
-    projection_matrix = torch.from_numpy(pca.components_).to(torch.float32)
-    fused_feature_vector = torch.matmul(fused_feature_vector.view(-1, 2304), projection_matrix.T).view(4, 24, -1)
-
-    # Return the fused feature vector
+    batch_size, seq_len, feature_dim = feature1.shape
+    
+    # Combine features
+    combined_features = torch.cat([feature1, feature2, feature3], dim=-1)
+    
+    # Perform PCA
+    pca = PCA(n_components=feature_dim)
+    combined_features_flat = combined_features.view(-1, combined_features.size(-1))
+    fused_feature_vector = torch.from_numpy(pca.fit_transform(combined_features_flat.cpu().numpy())).to(feature1.device)
+    
+    # Reshape back to original batch and sequence dimensions
+    fused_feature_vector = fused_feature_vector.view(batch_size, seq_len, -1)
+    
     return fused_feature_vector
 
 class TextCentredSP(nn.Module):

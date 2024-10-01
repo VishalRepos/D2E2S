@@ -79,7 +79,9 @@ def train_argparser():
     parser.add_argument('--example_count', type=int, default=None, help="Count of evaluation example to store (if store_examples == True)")
     parser.add_argument('--save_path', type=str, default="data/save/", help="Path to directory where model checkpoints are stored")
     parser.add_argument('--save_optimizer', action='store_true', default=False,help="Save optimizer alongside model")
-    parser.add_argument('--device', type=str, default="cuda", help='gpu or cpu')
+    #parser.add_argument('--device', type=str, default="cuda", help='gpu or cpu')
+    parser.add_argument('--device', type=str, default="cuda" if torch.cuda.is_available() else "cpu")
+
 
 
     opt = parser.parse_args()
