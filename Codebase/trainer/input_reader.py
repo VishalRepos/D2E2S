@@ -4,6 +4,7 @@ from trainer import util
 from collections import OrderedDict
 from typing import List
 from transformers import DebertaV2Tokenizer as DebertaTokenizer
+from transformers import AutoTokenizer, AutoConfig, AutoModel
 from trainer.entities import Dataset,Entity,EntityType,Sentiment,sentimentType
 import numpy as np
 class JsonInputReader():
