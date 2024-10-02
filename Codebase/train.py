@@ -74,6 +74,10 @@ class D2E2S_Trainer(BaseTrainer):
         train_dataset = input_reader.get_dataset(train_label)
         test_dataset = input_reader.get_dataset(test_label)
 
+        # Get the number of sentiment types and entity types from the input reader
+        sentiment_types = input_reader.sentiment_type_count
+        entity_types = input_reader.entity_type_count
+
         # load model
 
         config = AutoConfig.from_pretrained("microsoft/deberta-v3-base")
