@@ -78,7 +78,7 @@ class D2E2S_Trainer(BaseTrainer):
 
         config = AutoConfig.from_pretrained("microsoft/deberta-v3-base")
         #model = AutoModel.from_pretrained("microsoft/deberta-v3-base", config=config)
-        model = D2E2SModel(config, cls_token, sentiment_types, entity_types, args)
+        model = D2E2SModel(config, sentiment_types, entity_types, args)
         model.to(args.device)
         # create optimizer
         optimizer_params = self._get_optimizer_params(model)

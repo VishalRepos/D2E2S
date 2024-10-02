@@ -34,7 +34,7 @@ def get_token(h: torch.tensor, x: torch.tensor, token: int):
 
 class D2E2SModel(PreTrainedModel):
     VERSION = '1.1'
-    def __init__(self, config, cls_token: int, sentiment_types: int, entity_types: int, args):
+    def __init__(self, config, sentiment_types: int, entity_types: int, args):
         super(D2E2SModel, self).__init__(config)
         # 1、parameters init
         self.args = args
