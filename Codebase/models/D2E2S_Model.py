@@ -58,14 +58,12 @@ class D2E2SModel(PreTrainedModel):
         # 2、DebertaV3 model
         # self.deberta = DebertaV3Model(config)
         self.deberta = AutoModel.from_pretrained("microsoft/deberta-v3-base", config=config)
-        # self.BertAdapterModel = BertAdapterModel(config)
         self.Syn_gcn = GCN()
         self.Sem_gcn = SemGCN(self.args)
         self.senti_classifier = nn.Linear(config.hidden_size * 3 + self._size_embedding * 2, sentiment_types)
         self.entity_classifier = nn.Linear(config.hidden_size * 2 + self._size_embedding, entity_types)
         self.size_embeddings = nn.Embedding(100, self._size_embedding)
         self.dropout = nn.Dropout(self._prop_drop)
-        self._cls_token = cls_token
         self._sentiment_types = sentiment_types
         self._entity_types = entity_types
         self._max_pairs = self.max_pairs
