@@ -33,7 +33,7 @@ def train_argparser():
     parser.add_argument('--drop_out_rate', type=float, default=0.5, help='drop out rate.')
     parser.add_argument('--is_bidirect', default=True, help='Do use bi-RNN layer.')
     parser.add_argument('--use_gated', default=False, help='Do use gcnconv and gatedgraphconv.')
-    parser.add_argument('--hidden_dim', type=int, default=384, help='hidden layer dimension.')
+    parser.add_argument('--hidden_dim', type=int, default=1024, help='hidden layer dimension.')
     parser.add_argument('--emb_dim', type=int, default=1024, help='Word embedding dimension.')  # Updated for DeBERTa v3
     parser.add_argument('--lstm_layers', type=int, default=2, help='Number of LSTM layers.')
     parser.add_argument('--lstm_dim', type=int, default=384, help='dimension of lstm cell')

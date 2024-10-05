@@ -54,7 +54,7 @@ class SelfAttention(torch.nn.Module):
     def __init__(self, args):
         super(SelfAttention,self).__init__()
         self.args = args
-        self.input_projection = torch.nn.Linear(deberta_hidden_size, attention_hidden_size)
+        #self.input_projection = torch.nn.Linear(deberta_hidden_size, attention_hidden_size)
         self.linear_q = torch.nn.Linear(args.lstm_dim * 2, args.lstm_dim * 2)
         self.w_query = torch.nn.Linear(args.lstm_dim * 2, args.lstm_dim)
         self.w_value = torch.nn.Linear(args.lstm_dim * 2, args.lstm_dim)

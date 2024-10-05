@@ -58,6 +58,7 @@ class D2E2SModel(PreTrainedModel):
         # 2、DebertaV3 model
         # self.deberta = DebertaV3Model(config)
         self.deberta = AutoModel.from_pretrained("microsoft/deberta-v3-base", config=config)
+        self.deberta_projection = nn.Linear(config.hidden_size, args.hidden_dim)
         self.Syn_gcn = GCN()
         self.Sem_gcn = SemGCN(self.args)
         self.senti_classifier = nn.Linear(config.hidden_size * 3 + self._size_embedding * 2, sentiment_types)
@@ -132,6 +133,8 @@ class D2E2SModel(PreTrainedModel):
         # encoder layer
         # h = self.BertAdapterModel(input_ids=input_ids, attention_mask=self.attention_mask)[0]
         h = self.deberta(input_ids=input_ids, attention_mask=attention_mask)[0]
+        # Add this line to project the output
+        h = self.deberta_projection(h)
         self.output, _ = self.lstm(h, self.hidden)
         self.bert_lstm_output = self.lstm_dropout(self.output)
         self.bert_lstm_att_feature = self.bert_lstm_output
