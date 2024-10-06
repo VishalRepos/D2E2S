@@ -60,6 +60,7 @@ class D2E2SModel(PreTrainedModel):
         self.deberta = AutoModel.from_pretrained("microsoft/deberta-v3-base", config=config)
         # Update this line to match DeBERTa's hidden size
         self.hidden_dim = config.hidden_size  # Usually 1024 for DeBERTa-v3-base
+        print(f"D2E2SModel initialized with hidden_dim: {self.hidden_dim}")
 
         self.deberta_projection = nn.Linear(config.hidden_size, args.hidden_dim)
         #self.Syn_gcn = GCN()
@@ -151,6 +152,7 @@ class D2E2SModel(PreTrainedModel):
         # self.bert_lstm_att_feature = self.bert_lstm_output + bert_lstm_feature_attention
 
         # gcn layer
+        print(f"_forward_train - h shape: {h.shape}, adj shape: {adj.shape}")
         h_syn_ori, pool_mask_origin = self.Syn_gcn(adj, h)
         h_syn_gcn, pool_mask = self.Syn_gcn(adj, self.bert_lstm_att_feature)
         h_sem_ori, adj_sem_ori = self.Sem_gcn(h, encodings, seq_lens)

@@ -8,6 +8,9 @@ class GCN(nn.Module):
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
         self.out_dim = hidden_dim
+
+        print(f"GCN initialized with input_dim: {input_dim}, hidden_dim: {hidden_dim}")
+
         # gcn layer
         self.W = nn.ModuleList()
         self.W.append(nn.Linear(self.input_dim, self.hidden_dim))
@@ -18,6 +21,7 @@ class GCN(nn.Module):
 
 
     def forward(self, adj, inputs):
+        print(f"GCN forward - adj shape: {adj.shape}, inputs shape: {inputs.shape}")
         # gcn layer
 
         denom = adj.sum(2).unsqueeze(2) + 1
