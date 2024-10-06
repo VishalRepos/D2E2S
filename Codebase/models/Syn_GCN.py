@@ -2,16 +2,18 @@ import torch.nn as nn
 import torch.nn.functional as F
 class GCN(nn.Module):
 
-    def __init__(self, emb_dim=1024, num_layers=2,gcn_dropout=0.1):
+    def __init__(self, input_dim=1024, hidden_dim=1024, num_layers=2, gcn_dropout=0.1):
         super(GCN, self).__init__()
         self.layers = num_layers
-        self.emb_dim = emb_dim
-        self.out_dim = emb_dim
+        self.input_dim = input_dim
+        self.hidden_dim = hidden_dim
+        self.out_dim = hidden_dim
         # gcn layer
         self.W = nn.ModuleList()
-        for layer in range(self.layers):
-            input_dim = self.emb_dim if layer == 0 else self.out_dim
-            self.W.append(nn.Linear(input_dim, input_dim))
+        self.W.append(nn.Linear(self.input_dim, self.hidden_dim))
+        for layer in range(1, self.layers):
+            self.W.append(nn.Linear(self.hidden_dim, self.hidden_dim))
+
         self.gcn_drop = nn.Dropout(gcn_dropout)
 
 

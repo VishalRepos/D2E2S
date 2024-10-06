@@ -58,11 +58,15 @@ class D2E2SModel(PreTrainedModel):
         # 2、DebertaV3 model
         # self.deberta = DebertaV3Model(config)
         self.deberta = AutoModel.from_pretrained("microsoft/deberta-v3-base", config=config)
+        # Update this line to match DeBERTa's hidden size
+        self.hidden_dim = config.hidden_size  # Usually 1024 for DeBERTa-v3-base
+
         self.deberta_projection = nn.Linear(config.hidden_size, args.hidden_dim)
         #self.Syn_gcn = GCN()
         #self.Sem_gcn = SemGCN(self.args)
-        self.Syn_gcn = GCN(emb_dim=config.hidden_size)
-        self.Sem_gcn = SemGCN(self.args, emb_dim=config.hidden_size)
+        # Update GCN initialization
+        self.Syn_gcn = GCN(input_dim=self.hidden_dim, hidden_dim=self.hidden_dim)
+        self.Sem_gcn = SemGCN(self.args, emb_dim=self.hidden_dim)
         self.senti_classifier = nn.Linear(config.hidden_size * 3 + self._size_embedding * 2, sentiment_types)
         self.entity_classifier = nn.Linear(config.hidden_size * 2 + self._size_embedding, entity_types)
         self.size_embeddings = nn.Embedding(100, self._size_embedding)
@@ -149,8 +153,8 @@ class D2E2SModel(PreTrainedModel):
         # gcn layer
         h_syn_ori, pool_mask_origin = self.Syn_gcn(adj, h)
         h_syn_gcn, pool_mask = self.Syn_gcn(adj, self.bert_lstm_att_feature)
-        h_sem_ori, adj_sem_ori = self.Sem_gcn(h, input_ids, seq_lens)
-        h_sem_gcn, adj_sem_gcn = self.Sem_gcn(self.bert_lstm_att_feature, input_ids, seq_lens)
+        h_sem_ori, adj_sem_ori = self.Sem_gcn(h, encodings, seq_lens)
+        h_sem_gcn, adj_sem_gcn = self.Sem_gcn(self.bert_lstm_att_feature, encodings, seq_lens)
 
         # fusion layer
         h1 = self.TIN(h, h_syn_ori, h_syn_gcn, h_sem_ori, h_sem_gcn, adj_sem_ori, adj_sem_gcn)
