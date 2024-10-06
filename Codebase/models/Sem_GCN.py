@@ -5,7 +5,7 @@ import copy
 import math
 class SemGCN(nn.Module):
 
-    def __init__(self, args, emb_dim=768, num_layers=2, gcn_dropout=0.1):
+    def __init__(self, args, emb_dim=1024, num_layers=2, gcn_dropout=0.1):
         super(SemGCN, self).__init__()
         self.args = args
         self.layers = num_layers

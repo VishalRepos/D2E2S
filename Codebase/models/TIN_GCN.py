@@ -108,7 +108,8 @@ class GatedGCN(torch.nn.Module):
         x = Multi_Head_S_Pool(x, adj_sem_ori, adj_sem_gcn)
         # x = F.relu(self.conv2(x, edge_index, edge_attr))
         x = F.relu(self.conv3(x, edge_index))
-        h_fusion_1, h_fusion_2 = x.view(2, 16, -1, 768)[0], x.view(2, 16, -1, 768)[1]
+        # h_fusion_1, h_fusion_2 = x.view(2, 16, -1, 768)[0], x.view(2, 16, -1, 768)[1]
+        h_fusion_1, h_fusion_2 = x.view(2, 16, -1, self.hidden_dim)[0], x.view(2, 16, -1, self.hidden_dim)[1]
         return h_fusion_1, h_fusion_2
 
 def Multi_Head_S_Pool(x, adj_sem_ori, adj_sem_gcn):

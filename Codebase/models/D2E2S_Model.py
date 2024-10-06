@@ -59,8 +59,10 @@ class D2E2SModel(PreTrainedModel):
         # self.deberta = DebertaV3Model(config)
         self.deberta = AutoModel.from_pretrained("microsoft/deberta-v3-base", config=config)
         self.deberta_projection = nn.Linear(config.hidden_size, args.hidden_dim)
-        self.Syn_gcn = GCN()
-        self.Sem_gcn = SemGCN(self.args)
+        #self.Syn_gcn = GCN()
+        #self.Sem_gcn = SemGCN(self.args)
+        self.Syn_gcn = GCN(emb_dim=config.hidden_size)
+        self.Sem_gcn = SemGCN(self.args, emb_dim=config.hidden_size)
         self.senti_classifier = nn.Linear(config.hidden_size * 3 + self._size_embedding * 2, sentiment_types)
         self.entity_classifier = nn.Linear(config.hidden_size * 2 + self._size_embedding, entity_types)
         self.size_embeddings = nn.Embedding(100, self._size_embedding)
@@ -119,7 +121,8 @@ class D2E2SModel(PreTrainedModel):
         # self.Biaffine_ATT = BiaffineAttention(self.bert_feature_dim, self.bert_feature_dim)
 
         # 7、feature merge model
-        self.TIN = TIN(self.bert_feature_dim)
+        # self.TIN = TIN(self.bert_feature_dim)
+        self.TIN = TIN(hidden_dim=config.hidden_size)
         # self.TextCentredSP = TextCentredSP(self.bert_feature_dim*2, self.shared_dim, self.private_dim)
 
     def _forward_train(self, h, attention_mask, entity_masks, entity_sizes, sentiments, senti_masks, adj):
