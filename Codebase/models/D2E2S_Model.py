@@ -125,16 +125,16 @@ class D2E2SModel(PreTrainedModel):
     def _forward_train(self, h, attention_mask, entity_masks, entity_sizes, sentiments, senti_masks, adj):
 
         # Parameters init
-        attention_mask = attention_mask.float()
-        self.attention_mask = attention_mask
+        # attention_mask = attention_mask.float()
+        self.context_masks = attention_mask
         batch_size = h.shape[0]
         seq_lens = h.shape[1]
 
         # encoder layer
         # h = self.BertAdapterModel(input_ids=input_ids, attention_mask=self.attention_mask)[0]
-        h = self.deberta(input_ids=input_ids, attention_mask=attention_mask)[0]
+        # h = self.deberta(input_ids=input_ids, attention_mask=attention_mask)[0]
         # Add this line to project the output
-        h = self.deberta_projection(h)
+        # h = self.deberta_projection(h)
         self.output, _ = self.lstm(h, self.hidden)
         self.bert_lstm_output = self.lstm_dropout(self.output)
         self.bert_lstm_att_feature = self.bert_lstm_output
@@ -176,14 +176,14 @@ class D2E2SModel(PreTrainedModel):
 
     def _forward_eval(self, h, attention_mask, entity_masks, entity_sizes, entity_spans, entity_sample_masks, adj):
 
-        attention_mask = attention_mask.float()
-        self.attention_mask = attention_mask
+        # attention_mask = attention_mask.float()
+        self.context_masks = attention_mask
         batch_size = input_ids.shape[0]
         seq_lens = input_ids.shape[1]
 
         # encoder layer
         # h = self.BertAdapterModel(input_ids=input_ids, attention_mask=self.attention_mask)[0]
-        h = self.deberta(input_ids=input_ids, attention_mask=attention_mask)[0]
+        # h = self.deberta(input_ids=input_ids, attention_mask=attention_mask)[0]
         self.output, _ = self.lstm(h, self.hidden)
         self.bert_lstm_output = self.lstm_dropout(self.output)
         self.bert_lstm_att_feature = self.bert_lstm_output
@@ -365,6 +365,9 @@ class D2E2SModel(PreTrainedModel):
         # First, get the DeBERTa output
         deberta_output = self.deberta(input_ids=input_ids, attention_mask=attention_mask)[0]
     
+        # Project the output if needed
+        deberta_output = self.deberta_projection(deberta_output)
+
         # Then, pass this output along with other arguments to your custom methods
         if not evaluate:
             return self._forward_train(deberta_output, attention_mask, entity_masks, entity_sizes, 
