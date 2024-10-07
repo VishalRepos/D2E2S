@@ -24,11 +24,18 @@ class GCN(nn.Module):
         print(f"GCN forward - adj shape: {adj.shape}, inputs shape: {inputs.shape}")
         # gcn layer
 
+        # Adjust input dimension if necessary
+        if inputs.shape[-1] != self.input_dim:
+            print(f"Adjusting input dimension from {inputs.shape[-1]} to {self.hidden_dim}")
+            self.W[0] = nn.Linear(inputs.shape[-1], self.hidden_dim).to(inputs.device)
+            self.input_dim = inputs.shape[-1]
+
         denom = adj.sum(2).unsqueeze(2) + 1
         mask = (adj.sum(2) + adj.sum(1)).eq(0).unsqueeze(2)
 
         for l in range(self.layers):
             Ax = adj.bmm(inputs)
+            print(f"Layer {l} - Ax shape: {Ax.shape}")
             AxW = self.W[l](Ax)
             AxW = AxW + self.W[l](inputs)  # self loop
             AxW = AxW / denom
