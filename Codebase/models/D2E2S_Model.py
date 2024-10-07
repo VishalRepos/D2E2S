@@ -155,8 +155,8 @@ class D2E2SModel(PreTrainedModel):
         print(f"_forward_train - h shape: {h.shape}, adj shape: {adj.shape}")
         h_syn_ori, pool_mask_origin = self.Syn_gcn(adj, h)
         h_syn_gcn, pool_mask = self.Syn_gcn(adj, self.bert_lstm_att_feature)
-        h_sem_ori, adj_sem_ori = self.Sem_gcn(h, encodings, seq_lens)
-        h_sem_gcn, adj_sem_gcn = self.Sem_gcn(self.bert_lstm_att_feature, encodings, seq_lens)
+        h_sem_ori, adj_sem_ori = self.Sem_gcn(h, attention_mask, seq_lens)  # Changed 'encodings' to 'attention_mask'
+        h_sem_gcn, adj_sem_gcn = self.Sem_gcn(self.bert_lstm_att_feature, attention_mask, seq_lens)  # Changed 'encodings' to 'attention_mask'
 
         # fusion layer
         h1 = self.TIN(h, h_syn_ori, h_syn_gcn, h_sem_ori, h_sem_gcn, adj_sem_ori, adj_sem_gcn)
