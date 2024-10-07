@@ -13,15 +13,25 @@ class SemGCN(nn.Module):
         self.out_dim = emb_dim
         self.attention_heads = self.args.attention_heads
         self.mem_dim = self.args.hidden_dim
+        print(f"SemGCN initialized with emb_dim: {emb_dim}, mem_dim: {self.mem_dim}")
         # gcn layer
         self.W = nn.ModuleList()
         for layer in range(self.layers):
             input_dim = self.emb_dim if layer == 0 else self.out_dim
-            self.W.append(nn.Linear(input_dim, input_dim))
+            # self.W.append(nn.Linear(input_dim, input_dim))
+            self.W.append(nn.Linear(input_dim, self.out_dim))
         self.gcn_drop = nn.Dropout(gcn_dropout)
         self.attn = MultiHeadAttention(self.attention_heads, self.mem_dim * 2)
 
     def forward(self, inputs, encoding, seq_lens):
+        print(f"SemGCN forward - inputs shape: {inputs.shape}")
+        # Adjust input dimension if necessary
+
+        if inputs.shape[-1] != self.emb_dim:
+            print(f"Adjusting input dimension from {inputs.shape[-1]} to {self.emb_dim}")
+            self.W[0] = nn.Linear(inputs.shape[-1], self.out_dim).to(inputs.device)
+            self.emb_dim = inputs.shape[-1]
+        
         tok = encoding
         src_mask = (tok != 0).unsqueeze(-2)
         maxlen = seq_lens
@@ -42,7 +52,7 @@ class SemGCN(nn.Module):
 
         for j in range(adj_ag_new.size(0)):
             adj_ag_new[j] -= torch.diag(torch.diag(adj_ag_new[j]))
-            adj_ag_new[j] += torch.eye(adj_ag_new[j].size(0)).cuda()
+            adj_ag_new[j] += torch.eye(adj_ag_new[j].size(0)).to(adj_ag_new.device)
         adj_ag_new = mask_ * adj_ag_new
 
         # gcn layer
@@ -87,6 +97,7 @@ class MultiHeadAttention(nn.Module):
     def forward(self, query, key, mask=None):
         mask = mask[:, :, :query.size(1)]
         if mask is not None:
+            mask = mask[:, :, :query.size(1)]
             mask = mask.unsqueeze(1)
 
         nbatches = query.size(0)
