@@ -44,7 +44,7 @@ class D2E2SModel(PreTrainedModel):
         self.drop_rate = self.args.drop_out_rate
         self._is_bidirectional = self.args.is_bidirect
         self.layers = self.args.lstm_layers
-        #self._hidden_dim = self.args.hidden_dim
+        #self.hidden_dim = self.args.hidden_dim
         self.mem_dim = self.args.mem_dim
         self._emb_dim = self.args.emb_dim
         self.output_size = self._emb_dim
@@ -85,7 +85,7 @@ class D2E2SModel(PreTrainedModel):
         self.number = 1 
 
         # 3、LSTM Layers + Attention Layers
-        self.lstm = nn.LSTM(self._emb_dim, int(self._hidden_dim), self.layers, batch_first=True,
+        self.lstm = nn.LSTM(self._emb_dim, int(self.hidden_dim), self.layers, batch_first=True,
                             bidirectional=self._is_bidirectional, dropout=self.drop_rate)
         self.attention_layer = SelfAttention(self.args)
         self.dropout1 = torch.nn.Dropout(0.5)
@@ -94,9 +94,9 @@ class D2E2SModel(PreTrainedModel):
 
         # 4、linear and sigmoid layers
         if self._is_bidirectional:
-            self.fc = nn.Linear(int(self._hidden_dim * 2), self.output_size)
+            self.fc = nn.Linear(int(self.hidden_dim * 2), self.output_size)
         else:
-            self.fc = nn.Linear(int(self._hidden_dim), self.output_size)
+            self.fc = nn.Linear(int(self.hidden_dim), self.output_size)
 
         # 5、init_hidden
         weight = next(self.parameters()).data
@@ -105,13 +105,13 @@ class D2E2SModel(PreTrainedModel):
 
         if self.USE_CUDA:
             self.hidden = (
-                weight.new(self.layers * self.number, self.batch_size, self._hidden_dim).zero_().float().cuda(),
+                weight.new(self.layers * self.number, self.batch_size, self.hidden_dim).zero_().float().cuda(),
                 # self.hidden = 384
-                weight.new(self.layers * self.number, self.batch_size, self._hidden_dim).zero_().float().cuda()
+                weight.new(self.layers * self.number, self.batch_size, self.hidden_dim).zero_().float().cuda()
             )
         else:
-            self.hidden = (weight.new(self.layers * self.number, self.batch_size, self._hidden_dim).zero_().float(),
-                           weight.new(self.layers * self.number, self.batch_size, self._hidden_dim).zero_().float()
+            self.hidden = (weight.new(self.layers * self.number, self.batch_size, self.hidden_dim).zero_().float(),
+                           weight.new(self.layers * self.number, self.batch_size, self.hidden_dim).zero_().float()
                            )
 
         # 6、weight initialization
