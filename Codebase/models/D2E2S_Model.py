@@ -62,7 +62,7 @@ class D2E2SModel(PreTrainedModel):
         #self.hidden_dim = config.hidden_size  # Usually 1024 for DeBERTa-v3-base
         #print(f"D2E2SModel initialized with hidden_dim: {self.hidden_dim}")
 
-        #self.deberta_projection = nn.Linear(config.hidden_size, args.hidden_dim)
+        self.deberta_projection = nn.Linear(config.hidden_size, args.hidden_dim)
         self.hidden_dim = config.hidden_size  # This should now be 1024 for DeBERTa-v3
         print(f"D2E2SModel initialized with hidden_dim----------------This should now be 1024 for DeBERTa-v3--------------: {self.hidden_dim}")
         
