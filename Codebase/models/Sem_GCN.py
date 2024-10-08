@@ -17,9 +17,10 @@ class SemGCN(nn.Module):
         # gcn layer
         self.W = nn.ModuleList()
         for layer in range(self.layers):
-            #input_dim = self.emb_dim if layer == 0 else self.out_dim
             self.W.append(nn.Linear(self.emb_dim, self.emb_dim))
-            #self.W.append(nn.Linear(input_dim, self.out_dim))
+            # input_dim = self.emb_dim if layer == 0 else self.out_dim
+            # # self.W.append(nn.Linear(input_dim, input_dim))
+            # self.W.append(nn.Linear(input_dim, self.out_dim))
         self.gcn_drop = nn.Dropout(gcn_dropout)
         self.attn = MultiHeadAttention(self.attention_heads, self.emb_dim)
 
@@ -27,6 +28,12 @@ class SemGCN(nn.Module):
         print(f"SemGCN forward - inputs shape: {inputs.shape}")
         src_mask = attention_mask.unsqueeze(-2)
         # Adjust input dimension if necessary
+        # Update emb_dim based on actual input size
+        self.emb_dim = inputs.size(-1)
+        
+        # Update W layers if necessary
+        if self.W[0].in_features != self.emb_dim:
+            self.W = nn.ModuleList([nn.Linear(self.emb_dim, self.emb_dim) for _ in range(self.layers)])
 
         # if inputs.shape[-1] != self.emb_dim:
         #     print(f"Adjusting input dimension from {inputs.shape[-1]} to {self.emb_dim}")
@@ -69,6 +76,40 @@ class SemGCN(nn.Module):
 
         return outputs, adj_ag_new
 
+def clones(module, N):
+    return nn.ModuleList([copy.deepcopy(module) for _ in range(N)])
+
+class MultiHeadAttention(nn.Module):
+    def __init__(self, h, d_model, dropout=0.1):
+        super(MultiHeadAttention, self).__init__()
+        self.h = h
+        self.d_model = d_model
+        self.dropout = nn.Dropout(p=dropout)
+
+    def forward(self, query, key, mask=None):
+<<<<<<< HEAD
+        nbatches = query.size(0)
+        
+        # Dynamically calculate d_k based on input size
+        d_k = query.size(-1) // self.h
+        
+        # Dynamically create linear projections
+        self.linears = nn.ModuleList([nn.Linear(query.size(-1), self.d_model) for _ in range(2)])
+        
+=======
+        #mask = mask[:, :, :query.size(1)]
+>>>>>>> 717031848634c7a6bbffa0936a4e90d1075a9ce1
+        if mask is not None:
+            mask = mask[:, :, :query.size(1)]
+            mask = mask.unsqueeze(1)
+
+        query, key = [l(x).view(nbatches, -1, self.h, d_k).transpose(1, 2)
+                      for l, x in zip(self.linears, (query, key))]
+
+        attn = attention(query, key, mask=mask, dropout=self.dropout)
+
+        return attn
+
 def attention(query, key, mask=None, dropout=None):
     d_k = query.size(-1)
     scores = torch.matmul(query, key.transpose(-2, -1)) / math.sqrt(d_k)
@@ -80,31 +121,3 @@ def attention(query, key, mask=None, dropout=None):
         p_attn = dropout(p_attn)
 
     return p_attn
-
-def clones(module, N):
-    return nn.ModuleList([copy.deepcopy(module) for _ in range(N)])
-
-class MultiHeadAttention(nn.Module):
-
-    def __init__(self, h, d_model, dropout=0.1):
-        super(MultiHeadAttention, self).__init__()
-        assert d_model % h == 0
-
-        self.d_k = d_model // h
-        self.h = h
-        self.linears = clones(nn.Linear(d_model, d_model), 2)
-        self.dropout = nn.Dropout(p=dropout)
-
-    def forward(self, query, key, mask=None):
-        #mask = mask[:, :, :query.size(1)]
-        if mask is not None:
-            mask = mask[:, :, :query.size(1)]
-            mask = mask.unsqueeze(1)
-
-        nbatches = query.size(0)
-        query, key = [l(x).view(nbatches, -1, self.h, self.d_k).transpose(1, 2)
-                      for l, x in zip(self.linears, (query, key))]
-
-        attn = attention(query, key, mask=mask, dropout=self.dropout)
-
-        return attn
