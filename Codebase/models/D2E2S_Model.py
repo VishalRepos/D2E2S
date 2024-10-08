@@ -44,7 +44,7 @@ class D2E2SModel(PreTrainedModel):
         self.drop_rate = self.args.drop_out_rate
         self._is_bidirectional = self.args.is_bidirect
         self.layers = self.args.lstm_layers
-        self._hidden_dim = self.args.hidden_dim
+        #self._hidden_dim = self.args.hidden_dim
         self.mem_dim = self.args.mem_dim
         self._emb_dim = self.args.emb_dim
         self.output_size = self._emb_dim
@@ -59,19 +59,21 @@ class D2E2SModel(PreTrainedModel):
         # self.deberta = DebertaV3Model(config)
         self.deberta = AutoModel.from_pretrained("microsoft/deberta-v3-base", config=config)
         # Update this line to match DeBERTa's hidden size
-        self.hidden_dim = config.hidden_size  # Usually 1024 for DeBERTa-v3-base
-        print(f"D2E2SModel initialized with hidden_dim: {self.hidden_dim}")
+        #self.hidden_dim = config.hidden_size  # Usually 1024 for DeBERTa-v3-base
+        #print(f"D2E2SModel initialized with hidden_dim: {self.hidden_dim}")
 
-        self.deberta_projection = nn.Linear(config.hidden_size, args.hidden_dim)
-        #self.Syn_gcn = GCN()
-        #self.Sem_gcn = SemGCN(self.args)
-        # Update GCN initialization
+        #self.deberta_projection = nn.Linear(config.hidden_size, args.hidden_dim)
+        self.hidden_dim = config.hidden_size  # This should now be 1024 for DeBERTa-v3
+        print(f"D2E2SModel initialized with hidden_dim----------------This should now be 1024 for DeBERTa-v3--------------: {self.hidden_dim}")
+        
         self.Syn_gcn = GCN(input_dim=self.hidden_dim, hidden_dim=self.hidden_dim)
         self.Sem_gcn = SemGCN(self.args, emb_dim=self.hidden_dim)
         self.TIN = TIN(hidden_dim=self.hidden_dim)
+        
         # Update these lines to use the new hidden_dim
         self.senti_classifier = nn.Linear(self.hidden_dim * 3 + self._size_embedding * 2, sentiment_types)
         self.entity_classifier = nn.Linear(self.hidden_dim * 2 + self._size_embedding, entity_types)
+        
         
         self.size_embeddings = nn.Embedding(100, self._size_embedding)
         self.dropout = nn.Dropout(self._prop_drop)
@@ -141,6 +143,7 @@ class D2E2SModel(PreTrainedModel):
         batch_size = h.shape[0]
         seq_lens = h.shape[1]
 
+        print(f"_forward_train - h shape: {h.shape}, adj shape: {adj.shape}")
         # encoder layer
         # h = self.BertAdapterModel(input_ids=input_ids, attention_mask=self.attention_mask)[0]
         # h = self.deberta(input_ids=input_ids, attention_mask=attention_mask)[0]
