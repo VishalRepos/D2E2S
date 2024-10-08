@@ -87,18 +87,7 @@ class MultiHeadAttention(nn.Module):
         self.dropout = nn.Dropout(p=dropout)
 
     def forward(self, query, key, mask=None):
-<<<<<<< HEAD
-        nbatches = query.size(0)
-        
-        # Dynamically calculate d_k based on input size
-        d_k = query.size(-1) // self.h
-        
-        # Dynamically create linear projections
-        self.linears = nn.ModuleList([nn.Linear(query.size(-1), self.d_model) for _ in range(2)])
-        
-=======
         #mask = mask[:, :, :query.size(1)]
->>>>>>> 717031848634c7a6bbffa0936a4e90d1075a9ce1
         if mask is not None:
             mask = mask[:, :, :query.size(1)]
             mask = mask.unsqueeze(1)
