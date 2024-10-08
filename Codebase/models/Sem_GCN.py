@@ -17,25 +17,26 @@ class SemGCN(nn.Module):
         # gcn layer
         self.W = nn.ModuleList()
         for layer in range(self.layers):
-            input_dim = self.emb_dim if layer == 0 else self.out_dim
-            # self.W.append(nn.Linear(input_dim, input_dim))
-            self.W.append(nn.Linear(input_dim, self.out_dim))
+            #input_dim = self.emb_dim if layer == 0 else self.out_dim
+            self.W.append(nn.Linear(self.emb_dim, self.emb_dim))
+            #self.W.append(nn.Linear(input_dim, self.out_dim))
         self.gcn_drop = nn.Dropout(gcn_dropout)
-        self.attn = MultiHeadAttention(self.attention_heads, self.mem_dim * 2)
+        self.attn = MultiHeadAttention(self.attention_heads, self.emb_dim)
 
     def forward(self, inputs, encoding, seq_lens):
         print(f"SemGCN forward - inputs shape: {inputs.shape}")
+        src_mask = attention_mask.unsqueeze(-2)
         # Adjust input dimension if necessary
 
-        if inputs.shape[-1] != self.emb_dim:
-            print(f"Adjusting input dimension from {inputs.shape[-1]} to {self.emb_dim}")
-            self.W[0] = nn.Linear(inputs.shape[-1], self.out_dim).to(inputs.device)
-            self.emb_dim = inputs.shape[-1]
+        # if inputs.shape[-1] != self.emb_dim:
+        #     print(f"Adjusting input dimension from {inputs.shape[-1]} to {self.emb_dim}")
+        #     self.W[0] = nn.Linear(inputs.shape[-1], self.out_dim).to(inputs.device)
+        #     self.emb_dim = inputs.shape[-1]
         
-        tok = encoding
-        src_mask = (tok != 0).unsqueeze(-2)
+        # tok = encoding
+        # src_mask = (tok != 0).unsqueeze(-2)
         maxlen = seq_lens
-        mask_ = (torch.zeros_like(tok) != tok).float().unsqueeze(-1)[:, :maxlen]
+        mask_ = attention_mask.float().unsqueeze(-1)[:, :maxlen]
 
         gcn_inputs = inputs
         attn_tensor = self.attn(gcn_inputs, gcn_inputs, src_mask)
@@ -95,7 +96,7 @@ class MultiHeadAttention(nn.Module):
         self.dropout = nn.Dropout(p=dropout)
 
     def forward(self, query, key, mask=None):
-        mask = mask[:, :, :query.size(1)]
+        #mask = mask[:, :, :query.size(1)]
         if mask is not None:
             mask = mask[:, :, :query.size(1)]
             mask = mask.unsqueeze(1)

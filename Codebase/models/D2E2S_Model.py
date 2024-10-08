@@ -68,8 +68,11 @@ class D2E2SModel(PreTrainedModel):
         # Update GCN initialization
         self.Syn_gcn = GCN(input_dim=self.hidden_dim, hidden_dim=self.hidden_dim)
         self.Sem_gcn = SemGCN(self.args, emb_dim=self.hidden_dim)
-        self.senti_classifier = nn.Linear(config.hidden_size * 3 + self._size_embedding * 2, sentiment_types)
-        self.entity_classifier = nn.Linear(config.hidden_size * 2 + self._size_embedding, entity_types)
+        self.TIN = TIN(hidden_dim=self.hidden_dim)
+        # Update these lines to use the new hidden_dim
+        self.senti_classifier = nn.Linear(self.hidden_dim * 3 + self._size_embedding * 2, sentiment_types)
+        self.entity_classifier = nn.Linear(self.hidden_dim * 2 + self._size_embedding, entity_types)
+        
         self.size_embeddings = nn.Embedding(100, self._size_embedding)
         self.dropout = nn.Dropout(self._prop_drop)
         self._sentiment_types = sentiment_types
