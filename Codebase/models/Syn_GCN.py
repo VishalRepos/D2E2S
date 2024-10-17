@@ -15,12 +15,23 @@ class GCN(nn.Module):
         
         # We'll create the layers dynamically in the forward pass
 
+    def to(self, device):
+        self.device = device
+        return super().to(device)    
+
     def forward(self, adj, inputs):
         print(f"GCN forward - adj shape: {adj.shape}, inputs shape: {inputs.shape}")
         
+        # Ensure inputs are on the same device as the model
+        # device = next(self.parameters()).device
+        # adj = adj.to(device)
+        # inputs = inputs.to(device)
+        adj = adj.to(self.device)
+        inputs = inputs.to(self.device)
+        
         # Dynamically create or adjust layers based on input size
         if not hasattr(self, 'W') or self.W[0].in_features != inputs.shape[-1]:
-            self.input_dim = inputs.shape[-1]
+            self.input_dim = inputs.shape[-1]class SemGCN(nn.Module):
             self.W = nn.ModuleList()
             self.W.append(nn.Linear(self.input_dim, self.hidden_dim))
             for _ in range(1, self.layers):

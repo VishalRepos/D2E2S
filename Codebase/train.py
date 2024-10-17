@@ -42,6 +42,21 @@ class D2E2S_Trainer(BaseTrainer):
         self.max_pair_f1 = 40
         self.result_path = os.path.join(self._log_path_result, "result{}.txt".format(self.args.max_span_size))
 
+        # NEW: Add this line to initialize the device
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+        # NEW: Add this method to the class
+    def check_tensor_device(self, tensor_or_dict, target_device):
+        if isinstance(tensor_or_dict, dict):
+            return {k: self.check_tensor_device(v, target_device) for k, v in tensor_or_dict.items()}
+        elif isinstance(tensor_or_dict, torch.Tensor):
+            if tensor_or_dict.device != target_device:
+                print(f"Warning: Tensor on {tensor_or_dict.device}, moving to {target_device}")
+                return tensor_or_dict.to(target_device)
+            return tensor_or_dict
+        else:
+            return tensor_or_dict
+
     def _preprocess(self,args, input_reader_cls,types_path,train_path, test_path):
 
         train_label, test_label = 'train', 'test'
@@ -81,12 +96,19 @@ class D2E2S_Trainer(BaseTrainer):
         # load model
 
         config = AutoConfig.from_pretrained("microsoft/deberta-v3-base")
-        #model = AutoModel.from_pretrained("microsoft/deberta-v3-base", config=config)
+
+        # NEW: Set device
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        print(f"Using device: {device}")
+
+        # NEW: Create model and move to device
         model = D2E2SModel(config, sentiment_types, entity_types, args)
-        model.to(args.device)
+        model.to(device)
+
         # create optimizer
-        optimizer_params = self._get_optimizer_params(model)
-        optimizer = AdamW(optimizer_params, lr=args.lr, weight_decay=args.weight_decay, correct_bias=False)
+        optimizer = AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+        # optimizer_params = self._get_optimizer_params(model)
+        # optimizer = AdamW(optimizer_params, lr=args.lr, weight_decay=args.weight_decay, correct_bias=False)
         # create scheduler
         scheduler = transformers.get_linear_schedule_with_warmup(optimizer,
                                                                  num_warmup_steps=args.lr_warmup * updates_total,
@@ -124,7 +146,8 @@ class D2E2S_Trainer(BaseTrainer):
         total = dataset.sentence_count // self.args.batch_size
         for batch in tqdm(data_loader, total=total, desc='Train epoch %s' % epoch):
             model.train()
-            batch = util.to_device(batch, arg_parser.device)
+            # NEW: Use the check_tensor_device method
+            batch = self.check_tensor_device(batch, self.device)
 
             # forward step
             entity_logits, senti_logits, batch_loss = model(input_ids=batch['encodings'], 
@@ -185,8 +208,8 @@ class D2E2S_Trainer(BaseTrainer):
             # iterate batches
             total = math.ceil(dataset.sentence_count / self.args.batch_size)
             for batch in tqdm(data_loader, total=total, desc='Evaluate epoch %s' % epoch):
-                # move batch to selected device
-                batch = util.to_device(batch, self.args.device)
+                # NEW: Use the check_tensor_device method
+                batch = self.check_tensor_device(batch, self.device)
 
                 # run model (forward pass)
                 result = model(encodings=batch['encodings'], context_masks=batch['context_masks'],

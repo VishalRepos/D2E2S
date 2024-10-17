@@ -40,8 +40,21 @@ class TIN(nn.Module):
                                              nn.Linear(hidden_dim, hidden_dim),
                                              nn.LayerNorm(hidden_dim))
 
+    def to(self, device):
+        self.device = device
+        self.GatedGCN.to(device)
+        return super().to(device)                                         
+
     def forward(self, h_feature, h_syn_ori, h_syn_feature, h_sem_ori, h_sem_feature, adj_sem_ori, adj_sem_gcn):
         print(f"TIN forward - h_feature shape: {h_feature.shape}")
+
+        h_feature = h_feature.to(self.device)
+        h_syn_ori = h_syn_ori.to(self.device)
+        h_syn_feature = h_syn_feature.to(self.device)
+        h_sem_ori = h_sem_ori.to(self.device)
+        h_sem_feature = h_sem_feature.to(self.device)
+        adj_sem_ori = adj_sem_ori.to(self.device)
+        adj_sem_gcn = adj_sem_gcn.to(self.device)
 
         # (batch_size, sequence_length, hidden_dim)
         assert h_feature.shape == h_syn_feature.shape == h_sem_ori.shape == h_sem_feature.shape

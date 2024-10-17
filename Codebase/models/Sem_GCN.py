@@ -14,6 +14,12 @@ class SemGCN(nn.Module):
         self.attention_heads = self.args.attention_heads
         self.mem_dim = self.args.hidden_dim
         print(f"SemGCN initialized with emb_dim: {emb_dim}, mem_dim: {self.mem_dim}")
+
+        # Ensure inputs are on the same device as the model
+        device = next(self.parameters()).device
+        inputs = inputs.to(device)
+        attention_mask = attention_mask.to(device)
+        
         # gcn layer
         self.W = nn.ModuleList()
         for layer in range(self.layers):
@@ -24,9 +30,15 @@ class SemGCN(nn.Module):
         self.gcn_drop = nn.Dropout(gcn_dropout)
         self.attn = MultiHeadAttention(self.attention_heads, self.emb_dim)
 
+    def to(self, device):
+        self.device = device
+        return super().to(device)
+
     def forward(self, inputs, encoding, seq_lens):
         print(f"SemGCN forward - inputs shape: {inputs.shape}")
-        src_mask = attention_mask.unsqueeze(-2)
+        inputs = inputs.to(self.device)
+        attention_mask = attention_mask.to(self.device)
+        #src_mask = attention_mask.unsqueeze(-2)
         # Adjust input dimension if necessary
         # Update emb_dim based on actual input size
         self.emb_dim = inputs.size(-1)

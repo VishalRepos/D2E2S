@@ -36,6 +36,7 @@ class D2E2SModel(PreTrainedModel):
     VERSION = '1.1'
     def __init__(self, config, sentiment_types: int, entity_types: int, args):
         super(D2E2SModel, self).__init__(config)
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         # 1、parameters init
         self.args = args
         self._size_embedding = self.args.size_embedding
@@ -55,6 +56,12 @@ class D2E2SModel(PreTrainedModel):
         self.gcn_dim = self.args.gcn_dim
         self.gcn_dropout = self.args.gcn_dropout
 
+        def to(self, device):
+            self.device = device
+            self.Syn_gcn.to(device)
+            self.Sem_gcn.to(device)
+            self.TIN.to(device)
+            return super().to(device)
         # 2、DebertaV3 model
         # self.deberta = DebertaV3Model(config)
         self.deberta = AutoModel.from_pretrained("microsoft/deberta-v3-base", config=config)
@@ -136,7 +143,14 @@ class D2E2SModel(PreTrainedModel):
         # self.TextCentredSP = TextCentredSP(self.bert_feature_dim*2, self.shared_dim, self.private_dim)
 
     def _forward_train(self, h, attention_mask, entity_masks, entity_sizes, sentiments, senti_masks, adj):
-
+        # Move all inputs to the correct device
+        h = h.to(self.device)
+        attention_mask = attention_mask.to(self.device)
+        entity_masks = entity_masks.to(self.device)
+        entity_sizes = entity_sizes.to(self.device)
+        sentiments = sentiments.to(self.device)
+        senti_masks = senti_masks.to(self.device)
+        adj = adj.to(self.device)
         # Parameters init
         # attention_mask = attention_mask.float()
         self.context_masks = attention_mask
