@@ -56,23 +56,21 @@ class D2E2SModel(PreTrainedModel):
         self.gcn_dim = self.args.gcn_dim
         self.gcn_dropout = self.args.gcn_dropout
 
-        def to(self, device):
-            self.device = device
-            self.Syn_gcn.to(device)
-            self.Sem_gcn.to(device)
-            self.TIN.to(device)
-            return super().to(device)
-        # 2、DebertaV3 model
-        # self.deberta = DebertaV3Model(config)
+
         self.deberta = AutoModel.from_pretrained("microsoft/deberta-v3-base", config=config)
         # Update this line to match DeBERTa's hidden size
         #self.hidden_dim = config.hidden_size  # Usually 1024 for DeBERTa-v3-base
         #print(f"D2E2SModel initialized with hidden_dim: {self.hidden_dim}")
 
-        self.deberta_projection = nn.Linear(config.hidden_size, args.hidden_dim)
+        # self.deberta_projection = nn.Linear(config.hidden_size, args.hidden_dim)
         self.hidden_dim = config.hidden_size  # This should now be 1024 for DeBERTa-v3
         print(f"D2E2SModel initialized with hidden_dim----------------This should now be 1024 for DeBERTa-v3--------------: {self.hidden_dim}")
-        
+
+        # NEW: Add projection layer if needed
+        if self.hidden_dim != args.hidden_dim:
+            self.deberta_projection = nn.Linear(self.hidden_dim, args.hidden_dim)
+            print(f"Added projection layer from {self.hidden_dim} to {args.hidden_dim}")
+
         self.Syn_gcn = GCN(input_dim=self.hidden_dim, hidden_dim=self.hidden_dim)
         self.Sem_gcn = SemGCN(self.args, emb_dim=self.hidden_dim)
         self.TIN = TIN(hidden_dim=self.hidden_dim)
@@ -139,7 +137,7 @@ class D2E2SModel(PreTrainedModel):
 
         # 7、feature merge model
         # self.TIN = TIN(self.bert_feature_dim)
-        self.TIN = TIN(hidden_dim=config.hidden_size)
+        # self.TIN = TIN(hidden_dim=config.hidden_size)
         # self.TextCentredSP = TextCentredSP(self.bert_feature_dim*2, self.shared_dim, self.private_dim)
 
     def _forward_train(self, h, attention_mask, entity_masks, entity_sizes, sentiments, senti_masks, adj):

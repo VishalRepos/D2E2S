@@ -30,9 +30,8 @@ class SemGCN(nn.Module):
         self.gcn_drop = nn.Dropout(gcn_dropout)
         self.attn = MultiHeadAttention(self.attention_heads, self.emb_dim)
 
-    def to(self, device):
+    def set_device(self, device):
         self.device = device
-        return super().to(device)
 
     def forward(self, inputs, encoding, seq_lens):
         print(f"SemGCN forward - inputs shape: {inputs.shape}")
