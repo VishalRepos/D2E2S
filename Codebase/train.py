@@ -44,15 +44,16 @@ class D2E2S_Trainer(BaseTrainer):
 
         # NEW: Add this line to initialize the device
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        print(f"Using device train.py 47: {self.device}")
 
         # NEW: Add this method to the class
-    def check_tensor_device(self, tensor_or_dict, target_device):
+    def check_tensor_device(self, tensor_or_dict):
         if isinstance(tensor_or_dict, dict):
-            return {k: self.check_tensor_device(v, target_device) for k, v in tensor_or_dict.items()}
+            return {k: self.check_tensor_device(v) for k, v in tensor_or_dict.items()}
         elif isinstance(tensor_or_dict, torch.Tensor):
-            if tensor_or_dict.device != target_device:
-                print(f"Warning: Tensor on {tensor_or_dict.device}, moving to {target_device}")
-                return tensor_or_dict.to(target_device)
+            if tensor_or_dict.device != self.device:
+                print(f"Warning: Tensor on {tensor_or_dict.device}, moving to {self.device}")
+                return tensor_or_dict.to(self.device)
             return tensor_or_dict
         else:
             return tensor_or_dict
@@ -98,12 +99,12 @@ class D2E2S_Trainer(BaseTrainer):
         config = AutoConfig.from_pretrained("microsoft/deberta-v3-base")
 
         # NEW: Set device
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        print(f"Using device: {device}")
+        # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        # print(f"Using device: {device}")
 
         # NEW: Create model and move to device
         model = D2E2SModel(config, sentiment_types, entity_types, args)
-        model.to(device)
+        model.to(self.device)
 
         # create optimizer
         optimizer = AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
@@ -147,7 +148,7 @@ class D2E2S_Trainer(BaseTrainer):
         for batch in tqdm(data_loader, total=total, desc='Train epoch %s' % epoch):
             model.train()
             # NEW: Use the check_tensor_device method
-            batch = self.check_tensor_device(batch, self.device)
+            batch = self.check_tensor_device(batch)
 
             # forward step
             entity_logits, senti_logits, batch_loss = model(input_ids=batch['encodings'], 
@@ -209,7 +210,7 @@ class D2E2S_Trainer(BaseTrainer):
             total = math.ceil(dataset.sentence_count / self.args.batch_size)
             for batch in tqdm(data_loader, total=total, desc='Evaluate epoch %s' % epoch):
                 # NEW: Use the check_tensor_device method
-                batch = self.check_tensor_device(batch, self.device)
+                batch = self.check_tensor_device(batch)
 
                 # run model (forward pass)
                 result = model(encodings=batch['encodings'], context_masks=batch['context_masks'],

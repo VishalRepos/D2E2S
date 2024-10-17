@@ -36,7 +36,7 @@ class D2E2SModel(PreTrainedModel):
     VERSION = '1.1'
     def __init__(self, config, sentiment_types: int, entity_types: int, args):
         super(D2E2SModel, self).__init__(config)
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        # self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         # 1、parameters init
         self.args = args
         self._size_embedding = self.args.size_embedding
