@@ -46,6 +46,7 @@ class D2E2SModel(PreTrainedModel):
         self._is_bidirectional = self.args.is_bidirect
         self.layers = self.args.lstm_layers
         #self.hidden_dim = self.args.hidden_dim
+        self.hidden_dim = config.hidden_size
         self.mem_dim = self.args.mem_dim
         self._emb_dim = self.args.emb_dim
         self.output_size = self._emb_dim
@@ -57,13 +58,11 @@ class D2E2SModel(PreTrainedModel):
         self.gcn_dropout = self.args.gcn_dropout
 
 
-        self.deberta = AutoModel.from_pretrained("microsoft/deberta-v3-base", config=config)
-        # Update this line to match DeBERTa's hidden size
-        #self.hidden_dim = config.hidden_size  # Usually 1024 for DeBERTa-v3-base
-        #print(f"D2E2SModel initialized with hidden_dim: {self.hidden_dim}")
-
-        # self.deberta_projection = nn.Linear(config.hidden_size, args.hidden_dim)
+        self.deberta = AutoModel.from_pretrained("microsoft/deberta-v3-base", config=config))
+        
         self.hidden_dim = config.hidden_size  # This should now be 1024 for DeBERTa-v3
+        print(f"Model type ------------------------------: {config.model_type}")
+
         print(f"D2E2SModel initialized with hidden_dim----------------This should now be 1024 for DeBERTa-v3--------------: {self.hidden_dim}")
 
         # NEW: Add projection layer if needed
