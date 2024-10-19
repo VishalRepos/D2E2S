@@ -97,25 +97,26 @@ class D2E2S_Trainer(BaseTrainer):
 
         # load model
 
-        config = AutoConfig.from_pretrained("microsoft/deberta-v3-base")
-        config.hidden_size = 1024  # Manually set the correct hidden size
-        print(f"Config model type: -------- 100 --------{config.model_type}")
-        print(f"Config model name:  -------- 101 --------{config._name_or_path}")
-        print(f"Config hidden size:  -------- 102 --------{config.hidden_size}")
+        # Manually create the config for DeBERTa-v3-base
+        config = DebertaV2Config(
+            hidden_size=1024,
+            num_hidden_layers=12,
+            num_attention_heads=16,
+            intermediate_size=3072,
+            model_type="deberta-v2",
+            model_name_or_path="microsoft/deberta-v3-base"
+        )
 
-        # NEW: Set device
-        # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        # print(f"Using device: {device}")
+        print(f"Config model type: -------- 110 --------{config.model_type}")
+        print(f"Config model name:  -------- 111 --------{config.model_name_or_path}")
+        print(f"Config hidden size:  -------- 112 --------{config.hidden_size}")
 
-        # NEW: Create model and move to device
         model = D2E2SModel(config, sentiment_types, entity_types, args)
         model.to(self.device)
 
         # create optimizer
         optimizer = AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
-        # optimizer_params = self._get_optimizer_params(model)
-        # optimizer = AdamW(optimizer_params, lr=args.lr, weight_decay=args.weight_decay, correct_bias=False)
-        # create scheduler
+
         scheduler = transformers.get_linear_schedule_with_warmup(optimizer,
                                                                  num_warmup_steps=args.lr_warmup * updates_total,
                                                                  num_training_steps=updates_total)
