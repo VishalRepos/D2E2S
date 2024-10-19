@@ -62,7 +62,8 @@ class D2E2SModel(PreTrainedModel):
         
         self.hidden_dim = config.hidden_size  # This should now be 1024 for DeBERTa-v3
         print(f"Model type ------------------------------: {config.model_type}")
-
+        print(f"Config model name -------------------- : {config.model_name_or_path}")
+        print(f"Config hidden size-------------------- : {config.hidden_size}")
         print(f"D2E2SModel initialized with hidden_dim----------------This should now be 1024 for DeBERTa-v3--------------: {self.hidden_dim}")
 
         # NEW: Add projection layer if needed
