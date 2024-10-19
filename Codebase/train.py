@@ -100,7 +100,7 @@ class D2E2S_Trainer(BaseTrainer):
 `       # Load the correct configuration and model for DeBERTa-v3-base
         config = AutoConfig.from_pretrained("microsoft/deberta-v3-base")
         base_model = AutoModel.from_pretrained("microsoft/deberta-v3-base", config=config)
-`
+
         print(f"Config model type: -------- 110 --------{config.model_type}")
         print(f"Config model name:  -------- 111 --------{config.model_name_or_path}")
         print(f"Config hidden size:  -------- 112 --------{config.hidden_size}")
