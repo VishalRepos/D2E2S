@@ -100,7 +100,7 @@ class D2E2S_Trainer(BaseTrainer):
         base_model = AutoModel.from_pretrained("microsoft/deberta-v3-base", config=config)
 
         print(f"Config model type: -------- 110 --------{config.model_type}")
-        print(f"Config model name:  -------- 111 --------{config.model_name_or_path}")
+        print(f"Config model name:  -------- 111 --------{config._name_or_path}")
         print(f"Config hidden size:  -------- 112 --------{config.hidden_size}")
 
         model = D2E2SModel(config, sentiment_types, entity_types, args)
