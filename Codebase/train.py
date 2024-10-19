@@ -45,6 +45,7 @@ class D2E2S_Trainer(BaseTrainer):
         # NEW: Add this line to initialize the device
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print(f"Using device train.py 47: {self.device}")
+        print(f"Transformers version: {transformers.__version__}")
 
         # NEW: Add this method to the class
     def check_tensor_device(self, tensor_or_dict):
