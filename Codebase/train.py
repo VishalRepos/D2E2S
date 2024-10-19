@@ -96,7 +96,7 @@ class D2E2S_Trainer(BaseTrainer):
         entity_types = input_reader.entity_type_count
 
         # Manually create the config for DeBERTa-v3-base
-        config = DebertaV2Config.from_pretrained("microsoft/deberta-v3-base")
+        config = DebertaConfig.from_pretrained("microsoft/deberta-v3-base")
         config.hidden_size = 1024  # Force the hidden size to be 1024
         config.num_attention_heads = 16  # Adjust this if needed
         config.intermediate_size = 4096  # Adjust this if needed
