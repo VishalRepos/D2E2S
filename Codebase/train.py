@@ -97,17 +97,10 @@ class D2E2S_Trainer(BaseTrainer):
 
         # load model
 
-        # Manually create the config for DeBERTa-v3-base
-        config = DebertaConfig(
-            hidden_size=1024,
-            num_hidden_layers=12,
-            num_attention_heads=16,
-            intermediate_size=3072,
-            model_type="deberta-v2",
-            vocab_size=50265,
-            model_name_or_path="microsoft/deberta-v3-base"
-        )
-
+`       # Load the correct configuration and model for DeBERTa-v3-base
+        config = AutoConfig.from_pretrained("microsoft/deberta-v3-base")
+        base_model = AutoModel.from_pretrained("microsoft/deberta-v3-base", config=config)
+`
         print(f"Config model type: -------- 110 --------{config.model_type}")
         print(f"Config model name:  -------- 111 --------{config.model_name_or_path}")
         print(f"Config hidden size:  -------- 112 --------{config.hidden_size}")
