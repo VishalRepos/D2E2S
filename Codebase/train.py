@@ -104,6 +104,7 @@ class D2E2S_Trainer(BaseTrainer):
             num_attention_heads=16,
             intermediate_size=3072,
             model_type="deberta-v2",
+            vocab_size=50265,
             model_name_or_path="microsoft/deberta-v3-base"
         )
 
