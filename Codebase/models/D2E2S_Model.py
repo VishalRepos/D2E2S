@@ -58,7 +58,7 @@ class D2E2SModel(PreTrainedModel):
         self.gcn_dropout = self.args.gcn_dropout
 
 
-        self.deberta = AutoModel.from_pretrained("microsoft/deberta-v3-base", config=config))
+        self.deberta = AutoModel.from_pretrained("microsoft/deberta-v3-base", config=config)
         
         self.hidden_dim = config.hidden_size  # This should now be 1024 for DeBERTa-v3
         print(f"Model type ------------------------------: {config.model_type}")
