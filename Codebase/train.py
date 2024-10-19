@@ -97,7 +97,9 @@ class D2E2S_Trainer(BaseTrainer):
         # load model
 
         config = AutoConfig.from_pretrained("microsoft/deberta-v3-base")
-        print(f"Config hidden size: train.py line 100 ---- {config.hidden_size}")  # This should print 1024
+        print(f"Config model type: -------- 100 --------{config.model_type}")
+        print(f"Config model name:  -------- 101 --------{config.model_name_or_path}")
+        print(f"Config hidden size:  -------- 102 --------{config.hidden_size}")
 
         # NEW: Set device
         # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
