@@ -38,15 +38,21 @@ class D2E2SModel(PreTrainedModel):
         super(D2E2SModel, self).__init__(config)
         # self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         # 1、parameters init
-        assert config.model_type == "deberta-v2", f"Expected deberta-v2 config, got {config.model_type}"
-        assert config.hidden_size == 1024, f"Expected hidden size 1024 for DeBERTa-v3-base, got {config.hidden_size}"
+
         
         self.hidden_dim = config.hidden_size
         print(f"D2E2SModel initialized with hidden_dim: {self.hidden_dim}")
 
         #self.deberta = DebertaV2Model(config)
 
+
+
+        self.deberta = base_model
+        self.config = config
         self.args = args
+
+        assert config.hidden_size == 1024, f"Expected hidden size 1024 for DeBERTa-v3-base, got {config.hidden_size}"
+
         self._size_embedding = self.args.size_embedding
         self._prop_drop = self.args.prop_drop
         self._freeze_transformer = self.args.freeze_transformer
@@ -64,9 +70,6 @@ class D2E2SModel(PreTrainedModel):
         self.gcn_dim = self.args.gcn_dim
         self.gcn_dropout = self.args.gcn_dropout
 
-
-        self.deberta = base_model
-        self.config = config
 
         # Use the correct hidden size from the config
         self.hidden_dim = config.hidden_size

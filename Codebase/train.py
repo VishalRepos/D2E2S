@@ -95,9 +95,11 @@ class D2E2S_Trainer(BaseTrainer):
         sentiment_types = input_reader.sentiment_type_count
         entity_types = input_reader.entity_type_count
 
-       # Load the correct configuration and model for DeBERTa-v3-base
-        config = AutoConfig.from_pretrained("microsoft/deberta-v3-base")
-        base_model = AutoModel.from_pretrained("microsoft/deberta-v3-base", config=config)
+        # Manually create the config for DeBERTa-v3-base
+        config = DebertaV2Config.from_pretrained("microsoft/deberta-v3-base")
+        config.hidden_size = 1024  # Force the hidden size to be 1024
+        config.num_attention_heads = 16  # Adjust this if needed
+        config.intermediate_size = 4096  # Adjust this if needed
 
         print(f"Config model type: -------- 110 --------{config.model_type}")
         print(f"Config model name:  -------- 111 --------{config._name_or_path}")
