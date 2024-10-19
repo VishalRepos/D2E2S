@@ -44,7 +44,7 @@ class D2E2SModel(PreTrainedModel):
         self.hidden_dim = config.hidden_size
         print(f"D2E2SModel initialized with hidden_dim: {self.hidden_dim}")
 
-        self.deberta = DebertaV2Model(config)
+        #self.deberta = DebertaV2Model(config)
 
         self.args = args
         self._size_embedding = self.args.size_embedding
