@@ -35,24 +35,25 @@ class SemGCN(nn.Module):
 
     def forward(self, inputs, encoding, seq_lens):
         print(f"SemGCN forward - inputs shape: {inputs.shape}")
-        inputs = inputs.to(self.device)
-        attention_mask = attention_mask.to(self.device)
-        #src_mask = attention_mask.unsqueeze(-2)
-        # Adjust input dimension if necessary
-        # Update emb_dim based on actual input size
-        self.emb_dim = inputs.size(-1)
+        # Determine device from inputs
+        device = inputs.device
+        attention_mask = encoding.to(device)
+        # self.emb_dim = inputs.size(-1)
         
         # Update W layers if necessary
         if self.W[0].in_features != self.emb_dim:
             self.W = nn.ModuleList([nn.Linear(self.emb_dim, self.emb_dim) for _ in range(self.layers)])
 
-        # if inputs.shape[-1] != self.emb_dim:
-        #     print(f"Adjusting input dimension from {inputs.shape[-1]} to {self.emb_dim}")
+        if inputs.shape[-1] != self.emb_dim:
+            print(f"Adjusting input dimension from {inputs.shape[-1]} to {self.emb_dim}")
         #     self.W[0] = nn.Linear(inputs.shape[-1], self.out_dim).to(inputs.device)
         #     self.emb_dim = inputs.shape[-1]
+        # Recreate W layers with new dimensions
+            self.W = nn.ModuleList([nn.Linear(self.emb_dim, self.emb_dim).to(device) for _ in range(self.layers)])
+
         
         # tok = encoding
-        # src_mask = (tok != 0).unsqueeze(-2)
+        src_mask = attention_mask.unsqueeze(-2)
         maxlen = seq_lens
         mask_ = attention_mask.float().unsqueeze(-1)[:, :maxlen]
 
