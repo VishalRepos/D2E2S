@@ -98,7 +98,7 @@ class D2E2S_Trainer(BaseTrainer):
         # load model
 
         # Manually create the config for DeBERTa-v3-base
-        config = DebertaV2Config(
+        config = DebertaConfig(
             hidden_size=1024,
             num_hidden_layers=12,
             num_attention_heads=16,
