@@ -105,7 +105,9 @@ class D2E2S_Trainer(BaseTrainer):
         print(f"Config model name:  -------- 111 --------{config._name_or_path}")
         print(f"Config hidden size:  -------- 112 --------{config.hidden_size}")
 
-        model = D2E2SModel(config, sentiment_types, entity_types, args)
+        base_model = AutoModel.from_pretrained("microsoft/deberta-v3-base", config=config)
+
+        model = D2E2SModel(config, sentiment_types, entity_types, args, base_model)
         model.to(self.device)
 
         # create optimizer
