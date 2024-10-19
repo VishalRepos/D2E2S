@@ -95,9 +95,7 @@ class D2E2S_Trainer(BaseTrainer):
         sentiment_types = input_reader.sentiment_type_count
         entity_types = input_reader.entity_type_count
 
-        # load model
-
-`       # Load the correct configuration and model for DeBERTa-v3-base
+       # Load the correct configuration and model for DeBERTa-v3-base
         config = AutoConfig.from_pretrained("microsoft/deberta-v3-base")
         base_model = AutoModel.from_pretrained("microsoft/deberta-v3-base", config=config)
 
