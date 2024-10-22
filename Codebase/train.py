@@ -151,7 +151,7 @@ class D2E2S_Trainer(BaseTrainer):
             if not args.final_eval or (epoch == args.epochs - 1):
                 self._eval(model, test_dataset, input_reader, epoch + 1, updates_epoch)
 
-def train_epoch(self, model: torch.nn.Module, compute_loss: D2E2SLoss, optimizer: optimizer, 
+    def train_epoch(self, model: torch.nn.Module, compute_loss: D2E2SLoss, optimizer: optimizer, 
                     dataset: Dataset, updates_epoch: int, epoch: int):
         dataset.switch_mode(Dataset.TRAIN_MODE)
         data_loader = DataLoader(
@@ -215,7 +215,6 @@ def train_epoch(self, model: torch.nn.Module, compute_loss: D2E2SLoss, optimizer
 
     def _eval(self, model: torch.nn.Module, dataset: Dataset, input_reader: JsonInputReader,
               epoch: int = 0, updates_epoch: int = 0, iteration: int = 0):
-        
         evaluator = Evaluator(
             dataset, 
             input_reader, 
