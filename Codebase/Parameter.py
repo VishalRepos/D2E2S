@@ -63,8 +63,8 @@ def train_argparser():
     parser.add_argument('--neg_triple_count', type=int, default=100, help="Number of negative triplet samples per sample")
 
     # Model paths and settings
-    parser.add_argument('--tokenizer_path', default='microsoft/deberta-v2-base', type=str, help="Path to tokenizer")
-    parser.add_argument('--pretrained_bert_name', default='microsoft/deberta-v2-base', type=str, help="Pretrained model name")
+    parser.add_argument('--tokenizer_path', default='microsoft/deberta-v2-xlarge', type=str, help="Path to tokenizer")
+    parser.add_argument('--pretrained_bert_name', default='microsoft/deberta-v2-xlarge', type=str, help="Pretrained model name")
     
     # Hardware settings
     parser.add_argument('--cpu', action='store_true', default=False, 

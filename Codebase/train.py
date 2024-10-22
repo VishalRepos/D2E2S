@@ -33,7 +33,7 @@ warnings.filterwarnings("ignore")
 class D2E2S_Trainer(BaseTrainer):
     def __init__(self, args: argparse.Namespace):
         super().__init__(args)
-        self._tokenizer = AutoTokenizer.from_pretrained("microsoft/deberta-v2-base")
+        self._tokenizer = AutoTokenizer.from_pretrained("microsoft/deberta-v2-xlarge")
         self._predictions_path = os.path.join(self._log_path_predict, 'predicted_%s_epoch_%s.json')
         self._examples_path = os.path.join(self._log_path_predict, 'sample_%s_%s_epoch_%s.html')
         
@@ -98,7 +98,7 @@ class D2E2S_Trainer(BaseTrainer):
         entity_types = input_reader.entity_type_count
 
         # Configure DeBERTa V2
-        config = DebertaV2Config.from_pretrained("microsoft/deberta-v2-base")
+        config = DebertaV2Config.from_pretrained("microsoft/deberta-v2-xlarge")
         print(f"Config model type: {config.model_type}")
         print(f"Config model name: {config.model_name_or_path}")
         print(f"Config hidden size: {config.hidden_size}")
