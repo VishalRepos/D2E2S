@@ -3,9 +3,53 @@ import torch.nn.functional as F
 import torch
 import copy
 import math
-class SemGCN(nn.Module):
 
-    def __init__(self, args, emb_dim=1024, num_layers=2, gcn_dropout=0.1):
+def clones(module, N):
+    """Create N identical layers."""
+    return nn.ModuleList([copy.deepcopy(module) for _ in range(N)])
+
+def attention(query, key, mask=None, dropout=None):
+    """Compute 'Scaled Dot Product Attention'"""
+    d_k = query.size(-1)
+    scores = torch.matmul(query, key.transpose(-2, -1)) / math.sqrt(d_k)
+    if mask is not None:
+        scores = scores.masked_fill(mask == 0, -1e9)
+    p_attn = F.softmax(scores, dim=-1)
+    if dropout is not None:
+        p_attn = dropout(p_attn)
+    return p_attn
+
+class MultiHeadAttention(nn.Module):
+    def __init__(self, h, d_model, dropout=0.1):
+        """Initialize multi-head attention.
+        
+        Args:
+            h: number of heads
+            d_model: dimension of model
+            dropout: dropout probability
+        """
+        super(MultiHeadAttention, self).__init__()
+        assert d_model % h == 0
+
+        self.d_k = d_model // h
+        self.h = h
+        self.linears = clones(nn.Linear(d_model, d_model), 2)
+        self.dropout = nn.Dropout(p=dropout)
+
+    def forward(self, query, key, mask=None):
+        if mask is not None:
+            mask = mask[:, :, :query.size(1)]
+            mask = mask.unsqueeze(1)
+
+        nbatches = query.size(0)
+        query, key = [l(x).view(nbatches, -1, self.h, self.d_k).transpose(1, 2)
+                      for l, x in zip(self.linears, (query, key))]
+
+        attn = attention(query, key, mask=mask, dropout=self.dropout)
+        return attn
+
+class SemGCN(nn.Module):
+    def __init__(self, args, emb_dim=1536, num_layers=2, gcn_dropout=0.1):  # Updated default emb_dim to 1536
         super(SemGCN, self).__init__()
         self.args = args
         self.layers = num_layers
@@ -13,49 +57,35 @@ class SemGCN(nn.Module):
         self.out_dim = emb_dim
         self.attention_heads = self.args.attention_heads
         self.mem_dim = self.args.hidden_dim
+
         print(f"SemGCN initialized with emb_dim: {emb_dim}, mem_dim: {self.mem_dim}")
 
-        # Ensure inputs are on the same device as the model
-        device = next(self.parameters()).device
-        inputs = inputs.to(device)
-        attention_mask = attention_mask.to(device)
-        
         # gcn layer
         self.W = nn.ModuleList()
         for layer in range(self.layers):
-            self.W.append(nn.Linear(self.emb_dim, self.emb_dim))
-            # input_dim = self.emb_dim if layer == 0 else self.out_dim
-            # # self.W.append(nn.Linear(input_dim, input_dim))
-            # self.W.append(nn.Linear(input_dim, self.out_dim))
+            input_dim = self.emb_dim if layer == 0 else self.out_dim
+            self.W.append(nn.Linear(input_dim, self.out_dim))
+        
         self.gcn_drop = nn.Dropout(gcn_dropout)
         self.attn = MultiHeadAttention(self.attention_heads, self.emb_dim)
+        
+        # Initialize device
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    def set_device(self, device):
+    def to(self, device):
+        """Move the model to the specified device."""
         self.device = device
+        return super().to(device)
 
     def forward(self, inputs, encoding, seq_lens):
-        print(f"SemGCN forward - inputs shape: {inputs.shape}")
-        # Determine device from inputs
-        device = inputs.device
-        attention_mask = encoding.to(device)
-        # self.emb_dim = inputs.size(-1)
+        # Move inputs to correct device
+        inputs = inputs.to(self.device)
+        encoding = encoding.to(self.device)
         
-        # Update W layers if necessary
-        if self.W[0].in_features != self.emb_dim:
-            self.W = nn.ModuleList([nn.Linear(self.emb_dim, self.emb_dim) for _ in range(self.layers)])
-
-        if inputs.shape[-1] != self.emb_dim:
-            print(f"Adjusting input dimension from {inputs.shape[-1]} to {self.emb_dim}")
-        #     self.W[0] = nn.Linear(inputs.shape[-1], self.out_dim).to(inputs.device)
-        #     self.emb_dim = inputs.shape[-1]
-        # Recreate W layers with new dimensions
-            self.W = nn.ModuleList([nn.Linear(self.emb_dim, self.emb_dim).to(device) for _ in range(self.layers)])
-
-        
-        # tok = encoding
-        src_mask = attention_mask.unsqueeze(-2)
+        tok = encoding
+        src_mask = (tok != 0).unsqueeze(-2)
         maxlen = seq_lens
-        mask_ = attention_mask.float().unsqueeze(-1)[:, :maxlen]
+        mask_ = (torch.zeros_like(tok) != tok).float().unsqueeze(-1)[:, :maxlen]
 
         gcn_inputs = inputs
         attn_tensor = self.attn(gcn_inputs, gcn_inputs, src_mask)
@@ -72,7 +102,7 @@ class SemGCN(nn.Module):
 
         for j in range(adj_ag_new.size(0)):
             adj_ag_new[j] -= torch.diag(torch.diag(adj_ag_new[j]))
-            adj_ag_new[j] += torch.eye(adj_ag_new[j].size(0)).to(adj_ag_new.device)
+            adj_ag_new[j] += torch.eye(adj_ag_new[j].size(0)).to(self.device)
         adj_ag_new = mask_ * adj_ag_new
 
         # gcn layer
@@ -88,37 +118,9 @@ class SemGCN(nn.Module):
 
         return outputs, adj_ag_new
 
-def clones(module, N):
-    return nn.ModuleList([copy.deepcopy(module) for _ in range(N)])
-
-class MultiHeadAttention(nn.Module):
-    def __init__(self, h, d_model, dropout=0.1):
-        super(MultiHeadAttention, self).__init__()
-        self.h = h
-        self.d_model = d_model
-        self.dropout = nn.Dropout(p=dropout)
-
-    def forward(self, query, key, mask=None):
-        #mask = mask[:, :, :query.size(1)]
-        if mask is not None:
-            mask = mask[:, :, :query.size(1)]
-            mask = mask.unsqueeze(1)
-
-        query, key = [l(x).view(nbatches, -1, self.h, d_k).transpose(1, 2)
-                      for l, x in zip(self.linears, (query, key))]
-
-        attn = attention(query, key, mask=mask, dropout=self.dropout)
-
-        return attn
-
-def attention(query, key, mask=None, dropout=None):
-    d_k = query.size(-1)
-    scores = torch.matmul(query, key.transpose(-2, -1)) / math.sqrt(d_k)
-    if mask is not None:
-        scores = scores.masked_fill(mask == 0, -1e9)
-
-    p_attn = F.softmax(scores, dim=-1)
-    if dropout is not None:
-        p_attn = dropout(p_attn)
-
-    return p_attn
+    def __repr__(self):
+        """String representation of the module."""
+        return (f"SemGCN(emb_dim={self.emb_dim}, "
+                f"out_dim={self.out_dim}, "
+                f"layers={self.layers}, "
+                f"attention_heads={self.attention_heads})")
