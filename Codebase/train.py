@@ -201,8 +201,7 @@ def train_epoch(self, model: torch.nn.Module, compute_loss: D2E2SLoss, optimizer
 
         return iteration
 
-    def _log_train(self, optimizer: optimizer, loss: float, epoch: int,
-                   iteration: int, global_iteration: int, label: str):
+    def _log_train(self, optimizer: optimizer, loss: float, epoch: int, iteration: int, global_iteration: int, label: str):
         avg_loss = loss / self.args.batch_size
         lr = self._get_lr(optimizer)[0]
 
