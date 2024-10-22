@@ -48,7 +48,7 @@ class D2E2SModel(DebertaV2PreTrainedModel):
         self.gcn_dropout = self.args.gcn_dropout
 
         print(f"Model type: {config.model_type}")
-        print(f"Config model name: {config.model_name_or_path}")
+        print(f"Config model name: {config._name_or_path}")
         print(f"Config hidden size: {config.hidden_size}")
 
         if self.hidden_dim != args.hidden_dim:

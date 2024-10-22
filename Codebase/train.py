@@ -100,7 +100,7 @@ class D2E2S_Trainer(BaseTrainer):
         # Configure DeBERTa V2
         config = DebertaV2Config.from_pretrained("microsoft/deberta-v2-xlarge")
         print(f"Config model type: {config.model_type}")
-        print(f"Config model name: {config.model_name_or_path}")
+        print(f"Config model name: {config._name_or_path}")
         print(f"Config hidden size: {config.hidden_size}")
 
         # Initialize model
