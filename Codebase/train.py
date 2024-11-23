@@ -122,7 +122,7 @@ class D2E2S_Trainer(BaseTrainer):
         senti_criterion = torch.nn.BCEWithLogitsLoss(reduction='none')
         compute_loss = D2E2SLoss(senti_criterion, entity_criterion, model, optimizer, scheduler, args.max_grad_norm)
 
-        print(f"Trainer -> cls_token: {cls_token}")
+        print(f"Trainer -> cls_token: {self._tokenizer.convert_tokens_to_ids('[CLS]')}")
         print(f"Trainer -> Entity criterion: {entity_criterion}")
         print(f"Trainer -> Sentiment criterion: {senti_criterion}") 
         print(f"Trainer -> Compute loss parameters:")
