@@ -126,9 +126,9 @@ class D2E2S_Trainer(BaseTrainer):
         print(f"Trainer -> Entity criterion: {entity_criterion}")
         print(f"Trainer -> Sentiment criterion: {senti_criterion}") 
         print(f"Trainer -> Compute loss parameters:")
-        print(f"Trainer -> - Sentiment loss: {compute_loss.senti_criterion}")
-        print(f"Trainer -> - Entity loss: {compute_loss.entity_criterion}")
-        print(f"Trainer -> - Max gradient norm: {compute_loss.max_grad_norm}")
+        print(f"Trainer -> - Sentiment loss: {compute_loss._senti_criterion}")
+        print(f"Trainer -> - Entity loss: {compute_loss._entity_criterion}")
+        print(f"Trainer -> - Max gradient norm: {compute_loss._max_grad_norm}")
 
         # eval validation set
         if args.init_eval:
