@@ -306,32 +306,32 @@ class D2E2SModel(BertPreTrainedModel):
 
             return entity_clf, senti_clf, sentiments
 
-        def _debug_eval(self, h, entity_clf, senti_clf):
-            """Debug information for evaluation"""
-            print("\nEvaluation Debug Information:")
-            print(f"DeBERTa output shape: {h.shape}")
-            print(f"Entity classification probabilities:")
-            print(f"- Shape: {entity_clf.shape}")
-            print(f"- Max: {entity_clf.max().item():.4f}")
-            print(f"- Min: {entity_clf.min().item():.4f}")
-            print(f"Sentiment classification probabilities:")
-            print(f"- Shape: {senti_clf.shape}")
-            print(f"- Max: {senti_clf.max().item():.4f}")
-            print(f"- Min: {senti_clf.min().item():.4f}")
+    def _debug_eval(self, h, entity_clf, senti_clf):
+        """Debug information for evaluation"""
+        print("\nEvaluation Debug Information:")
+        print(f"DeBERTa output shape: {h.shape}")
+        print(f"Entity classification probabilities:")
+        print(f"- Shape: {entity_clf.shape}")
+        print(f"- Max: {entity_clf.max().item():.4f}")
+        print(f"- Min: {entity_clf.min().item():.4f}")
+        print(f"Sentiment classification probabilities:")
+        print(f"- Shape: {senti_clf.shape}")
+        print(f"- Max: {senti_clf.max().item():.4f}")
+        print(f"- Min: {senti_clf.min().item():.4f}")
 
-        def get_evaluation_metrics(self, entity_clf, senti_clf):
-            """Calculate evaluation metrics"""
-            return {
-                'entity_confidence': entity_clf.max(dim=2)[0].mean().item(),
-                'sentiment_confidence': senti_clf.max(dim=2)[0].mean().item(),
-                'entity_entropy': self._calculate_entropy(entity_clf),
-                'sentiment_entropy': self._calculate_entropy(senti_clf)
-            }
+    def get_evaluation_metrics(self, entity_clf, senti_clf):
+        """Calculate evaluation metrics"""
+        return {
+            'entity_confidence': entity_clf.max(dim=2)[0].mean().item(),
+            'sentiment_confidence': senti_clf.max(dim=2)[0].mean().item(),
+            'entity_entropy': self._calculate_entropy(entity_clf),
+            'sentiment_entropy': self._calculate_entropy(senti_clf)
+        }
 
-        def _calculate_entropy(self, probs):
-            """Calculate entropy of predictions"""
-            entropy = -torch.sum(probs * torch.log(probs + 1e-10), dim=2)
-            return entropy.mean().item()
+    def _calculate_entropy(self, probs):
+        """Calculate entropy of predictions"""
+        entropy = -torch.sum(probs * torch.log(probs + 1e-10), dim=2)
+        return entropy.mean().item()
             
     def _classify_entities(self, encodings, h, entity_masks, size_embeddings, args):
         # entity_masks: tensor(4,132,24) 4:batch_size, 132: entities count, 24: one sentence token count and one entity need 24 mask
