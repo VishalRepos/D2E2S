@@ -55,103 +55,103 @@ class D2E2SModel(DebertaV2PreTrainedModel):
         print(f"Entity types: {entity_types}")
         print(f"Args: {vars(args)}")
 
-            # 1、parameters init
-            self.args = args
-            self._size_embedding = self.args.size_embedding
-            self._prop_drop = self.args.prop_drop
-            self._freeze_transformer = self.args.freeze_transformer
-            self.drop_rate = self.args.drop_out_rate
-            self._is_bidirectional = self.args.is_bidirect
-            self.layers = self.args.lstm_layers
-            self._hidden_dim = self.args.hidden_dim
-            self.mem_dim = self.args.mem_dim
-            self._emb_dim = self.args.emb_dim
-            self.output_size = self._emb_dim
-            self.batch_size = self.args.batch_size
-            self.USE_CUDA = USE_CUDA
-            self.max_pairs = 100
-            self.bert_feature_dim = self.args.bert_feature_dim
-            self.gcn_dim = self.args.gcn_dim
-            self.gcn_dropout = self.args.gcn_dropout
+        # 1、parameters init
+        self.args = args
+        self._size_embedding = self.args.size_embedding
+        self._prop_drop = self.args.prop_drop
+        self._freeze_transformer = self.args.freeze_transformer
+        self.drop_rate = self.args.drop_out_rate
+        self._is_bidirectional = self.args.is_bidirect
+        self.layers = self.args.lstm_layers
+        self._hidden_dim = self.args.hidden_dim
+        self.mem_dim = self.args.mem_dim
+        self._emb_dim = self.args.emb_dim
+        self.output_size = self._emb_dim
+        self.batch_size = self.args.batch_size
+        self.USE_CUDA = USE_CUDA
+        self.max_pairs = 100
+        self.bert_feature_dim = self.args.bert_feature_dim
+        self.gcn_dim = self.args.gcn_dim
+        self.gcn_dropout = self.args.gcn_dropout
 
-            # 2、DeBERTa model (changed from BERT)
-            self.deberta = DebertaV2Model(config)  # Changed from BertModel
-            self.Syn_gcn = GCN()
-            self.Sem_gcn = SemGCN(self.args)
-            
-            # Adjust classifier dimensions based on DeBERTa config
-            self.senti_classifier = nn.Linear(config.hidden_size * 3 + self._size_embedding * 2, sentiment_types)
-            self.entity_classifier = nn.Linear(config.hidden_size * 2 + self._size_embedding, entity_types)
-            self.size_embeddings = nn.Embedding(100, self._size_embedding)
-            self.dropout = nn.Dropout(self._prop_drop)
-            self._cls_token = cls_token
-            self._sentiment_types = sentiment_types
-            self._entity_types = entity_types
-            self._max_pairs = self.max_pairs
-            self.neg_span_all = 0
-            self.neg_span = 0
-            self.number = 1 
-            print(f"Model -> DeBERTa hidden_size: {config.hidden_size}")
+        # 2、DeBERTa model (changed from BERT)
+        self.deberta = DebertaV2Model(config)  # Changed from BertModel
+        self.Syn_gcn = GCN()
+        self.Sem_gcn = SemGCN(self.args)
+        
+        # Adjust classifier dimensions based on DeBERTa config
+        self.senti_classifier = nn.Linear(config.hidden_size * 3 + self._size_embedding * 2, sentiment_types)
+        self.entity_classifier = nn.Linear(config.hidden_size * 2 + self._size_embedding, entity_types)
+        self.size_embeddings = nn.Embedding(100, self._size_embedding)
+        self.dropout = nn.Dropout(self._prop_drop)
+        self._cls_token = cls_token
+        self._sentiment_types = sentiment_types
+        self._entity_types = entity_types
+        self._max_pairs = self.max_pairs
+        self.neg_span_all = 0
+        self.neg_span = 0
+        self.number = 1 
+        print(f"Model -> DeBERTa hidden_size: {config.hidden_size}")
 
-            # 3、LSTM Layers + Attention Layers
-            self.lstm = nn.LSTM(self._emb_dim, 
-                            int(self._hidden_dim), 
-                            self.layers, 
-                            batch_first=True,
-                            bidirectional=self._is_bidirectional, 
-                            dropout=self.drop_rate)
-            self.attention_layer = SelfAttention(self.args)
-            self.dropout1 = torch.nn.Dropout(0.5)
-            self.dropout2 = torch.nn.Dropout(0)
-            self.lstm_dropout = nn.Dropout(self.drop_rate)
+        # 3、LSTM Layers + Attention Layers
+        self.lstm = nn.LSTM(self._emb_dim, 
+                        int(self._hidden_dim), 
+                        self.layers, 
+                        batch_first=True,
+                        bidirectional=self._is_bidirectional, 
+                        dropout=self.drop_rate)
+        self.attention_layer = SelfAttention(self.args)
+        self.dropout1 = torch.nn.Dropout(0.5)
+        self.dropout2 = torch.nn.Dropout(0)
+        self.lstm_dropout = nn.Dropout(self.drop_rate)
 
-            # 4、linear and sigmoid layers
-            if self._is_bidirectional:
-                self.fc = nn.Linear(int(self._hidden_dim * 2), self.output_size)
-            else:
-                self.fc = nn.Linear(int(self._hidden_dim), self.output_size)
+        # 4、linear and sigmoid layers
+        if self._is_bidirectional:
+            self.fc = nn.Linear(int(self._hidden_dim * 2), self.output_size)
+        else:
+            self.fc = nn.Linear(int(self._hidden_dim), self.output_size)
 
-            # 5、init_hidden
-            weight = next(self.parameters()).data
-            if self._is_bidirectional:
-                self.number = 2
+        # 5、init_hidden
+        weight = next(self.parameters()).data
+        if self._is_bidirectional:
+            self.number = 2
 
-            if self.USE_CUDA:
-                self.hidden = (
-                    weight.new(self.layers * self.number, self.batch_size, self._hidden_dim).zero_().float().cuda(),
-                    weight.new(self.layers * self.number, self.batch_size, self._hidden_dim).zero_().float().cuda()
-                )
-            else:
-                self.hidden = (
-                    weight.new(self.layers * self.number, self.batch_size, self._hidden_dim).zero_().float(),
-                    weight.new(self.layers * self.number, self.batch_size, self._hidden_dim).zero_().float()
-                )
+        if self.USE_CUDA:
+            self.hidden = (
+                weight.new(self.layers * self.number, self.batch_size, self._hidden_dim).zero_().float().cuda(),
+                weight.new(self.layers * self.number, self.batch_size, self._hidden_dim).zero_().float().cuda()
+            )
+        else:
+            self.hidden = (
+                weight.new(self.layers * self.number, self.batch_size, self._hidden_dim).zero_().float(),
+                weight.new(self.layers * self.number, self.batch_size, self._hidden_dim).zero_().float()
+            )
 
-            # 6、weight initialization
-            self.init_weights()  # Make sure this is compatible with DeBERTa
-            if self._freeze_transformer:
-                print("Freeze DeBERTa transformer weights")
-                # freeze all transformer weights
-                for param in self.deberta.parameters():
-                    param.requires_grad = False
+        # 6、weight initialization
+        self.init_weights()  # Make sure this is compatible with DeBERTa
+        if self._freeze_transformer:
+            print("Freeze DeBERTa transformer weights")
+            # freeze all transformer weights
+            for param in self.deberta.parameters():
+                param.requires_grad = False
 
-            # 7、feature merge model
-            self.TIN = TIN(self.bert_feature_dim)
-            
-            # Add DeBERTa specific configurations
-            self.config = config
-            
-            # Initialize DeBERTa specific components if needed
-            self.relative_attention = getattr(config, 'relative_attention', False)
-            self.position_biased_input = getattr(config, 'position_biased_input', True)
-            
-            print(f"\nDeBERTa Model Configuration:")
-            print(f"Hidden Size: {config.hidden_size}")
-            print(f"Num Attention Heads: {config.num_attention_heads}")
-            print(f"Intermediate Size: {config.intermediate_size}")
-            print(f"Max Position Embeddings: {config.max_position_embeddings}")
-            print(f"Relative Attention: {self.relative_attention}")
-            print(f"Position Biased Input: {self.position_biased_input}")
+        # 7、feature merge model
+        self.TIN = TIN(self.bert_feature_dim)
+        
+        # Add DeBERTa specific configurations
+        self.config = config
+        
+        # Initialize DeBERTa specific components if needed
+        self.relative_attention = getattr(config, 'relative_attention', False)
+        self.position_biased_input = getattr(config, 'position_biased_input', True)
+        
+        print(f"\nDeBERTa Model Configuration:")
+        print(f"Hidden Size: {config.hidden_size}")
+        print(f"Num Attention Heads: {config.num_attention_heads}")
+        print(f"Intermediate Size: {config.intermediate_size}")
+        print(f"Max Position Embeddings: {config.max_position_embeddings}")
+        print(f"Relative Attention: {self.relative_attention}")
+        print(f"Position Biased Input: {self.position_biased_input}")
 
     def _forward_train(self, encodings: torch.tensor, context_masks: torch.tensor, 
                     entity_masks: torch.tensor, entity_sizes: torch.tensor, 
