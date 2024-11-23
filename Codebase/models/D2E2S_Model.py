@@ -29,7 +29,7 @@ def get_token(h: torch.tensor, x: torch.tensor, token: int):
 
     return token_h
 
-class D2E2SModel(BertPreTrainedModel):
+class D2E2SModel(DebertaV2PreTrainedModel):
     VERSION = '1.1'
     def __init__(self, config: DebertaV2Config, cls_token: int, sentiment_types: int, entity_types: int, args):
             super(D2E2SModel, self).__init__(config)
