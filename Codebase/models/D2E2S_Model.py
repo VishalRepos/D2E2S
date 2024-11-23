@@ -31,9 +31,30 @@ def get_token(h: torch.tensor, x: torch.tensor, token: int):
 
 class D2E2SModel(DebertaV2PreTrainedModel):
     VERSION = '1.1'
-    def __init__(self, config: DebertaV2Config, cls_token: int, sentiment_types: int, entity_types: int, args):
-            super(D2E2SModel, self).__init__(config)
+    def __init__(self, config: DebertaV2Config, cls_token: int, 
+                sentiment_types: int, entity_types: int, args):
+        super().__init__(config)
+        
+        # Validate inputs
+        if cls_token is None:
+            raise ValueError("cls_token cannot be None")
+        
+        if sentiment_types < 1:
+            raise ValueError(f"Invalid sentiment_types: {sentiment_types}")
             
+        if entity_types < 1:
+            raise ValueError(f"Invalid entity_types: {entity_types}")
+        
+        if args is None:
+            raise ValueError("args cannot be None")
+            
+        print("\nModel Initialization Parameters:")
+        print(f"Config: {config}")
+        print(f"CLS token: {cls_token}")
+        print(f"Sentiment types: {sentiment_types}")
+        print(f"Entity types: {entity_types}")
+        print(f"Args: {vars(args)}")
+
             # 1、parameters init
             self.args = args
             self._size_embedding = self.args.size_embedding
