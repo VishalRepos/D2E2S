@@ -106,7 +106,9 @@ class D2E2S_Trainer(BaseTrainer):
         # load model
         config = DebertaV2Config.from_pretrained("microsoft/deberta-v2-xlarge")
         # Initialize model
-        model = D2E2SModel(config, sentiment_types, entity_types, args)
+        model = D2E2SModel(config, cls_token=self._tokenizer.convert_tokens_to_ids('[CLS]'),
+                                           sentiment_types=input_reader.sentiment_type_count - 1,
+                                           entity_types=input_reader.entity_type_count, args)
         model.to(args.device)
         # create optimizer
         optimizer_params = self._get_optimizer_params(model)
