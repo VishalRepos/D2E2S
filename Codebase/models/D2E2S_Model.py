@@ -70,6 +70,7 @@ class D2E2SModel(BertPreTrainedModel):
         self.neg_span_all = 0
         self.neg_span = 0
         self.number = 1 
+        print(f"Model -> config.hidden_size: {config.hidden_size}")
 
         # 3、LSTM Layers + Attention Layers
         self.lstm = nn.LSTM(self._emb_dim, int(self._hidden_dim), self.layers, batch_first=True,
@@ -252,6 +253,7 @@ class D2E2SModel(BertPreTrainedModel):
 
         # get cls token as candidate context representation
         entity_ctx = get_token(h, encodings, self._cls_token)
+        print(f"Model -> entity_ctx: {entity_ctx}")
 
         # create candidate representations including context, max pooled span and size embedding
         entity_repr = torch.cat([entity_ctx.unsqueeze(1).repeat(1, entity_spans_pool.shape[1], 1),

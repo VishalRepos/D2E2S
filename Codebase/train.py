@@ -25,15 +25,43 @@ warnings.filterwarnings("ignore")
 
 class D2E2S_Trainer(BaseTrainer):
     def __init__(self, args: argparse.Namespace):
+        print("Initializing model...")
         super().__init__(args)
-
-        self._tokenizer = BertTokenizer.from_pretrained('./bert-base-uncased', do_lower_case=args.lowercase)
+        
+        # Print all arguments
+        print("\nInitialization Arguments:")
+        for arg, value in vars(args).items():
+            print(f"{arg}: {value}")
+        
+        # Setup tokenizer
+        print("\nSetting up tokenizer...")
+        self._tokenizer = BertTokenizer.from_pretrained(
+            './bert-base-uncased', 
+            do_lower_case=args.lowercase
+        )
+        print(f"Tokenizer vocabulary size: {len(self._tokenizer)}")
+        
+        # Setup paths
+        print("\nSetting up file paths...")
         self._predictions_path = os.path.join(self._log_path_predict, 'predicted_%s_epoch_%s.json')
         self._examples_path = os.path.join(self._log_path_predict, 'sample_%s_%s_epoch_%s.html')
-        os.makedirs(self._log_path_result)
-        os.makedirs(self._log_path_predict)
+        print(f"Predictions path template: {self._predictions_path}")
+        print(f"Examples path template: {self._examples_path}")
+        
+        # Create directories
+        print("\nCreating directories...")
+        os.makedirs(self._log_path_result, exist_ok=True)
+        os.makedirs(self._log_path_predict, exist_ok=True)
+        print(f"Created results directory: {self._log_path_result}")
+        print(f"Created predictions directory: {self._log_path_predict}")
+        
+        # Set parameters
+        print("\nSetting model parameters...")
         self.max_pair_f1 = 40
-        self.result_path = os.path.join(self._log_path_result, "result{}.txt".format(self.args.max_span_size))
+        self.result_path = os.path.join(self._log_path_result, 
+            f"result{self.args.max_span_size}.txt")
+        print(f"Maximum pair F1 score: {self.max_pair_f1}")
+        print(f"Results will be saved to: {self.result_path}")
 
     def _preprocess(self,args, input_reader_cls,types_path,train_path, test_path):
 
@@ -52,6 +80,10 @@ class D2E2S_Trainer(BaseTrainer):
         train_sample_count = train_dataset.sentence_count
         updates_epoch = train_sample_count // args.batch_size
         updates_total = updates_epoch * args.epochs
+
+        print(f"Trainer -> Sentence count: {train_sample_count}")
+        print(f"Trainer -> Updates per epoch: {updates_epoch}")
+        print(f"Trainer -> Total updates: {updates_total}")
 
         print("   ", self.args.dataset, "  ", self.args.max_span_size)
         return input_reader, updates_total,updates_epoch
@@ -89,6 +121,15 @@ class D2E2S_Trainer(BaseTrainer):
         entity_criterion = torch.nn.CrossEntropyLoss(reduction='none')
         senti_criterion = torch.nn.BCEWithLogitsLoss(reduction='none')
         compute_loss = D2E2SLoss(senti_criterion, entity_criterion, model, optimizer, scheduler, args.max_grad_norm)
+
+        print(f"Trainer -> cls_token: {cls_token}")
+        print(f"Trainer -> Entity criterion: {entity_criterion}")
+        print(f"Trainer -> Sentiment criterion: {senti_criterion}") 
+        print(f"Trainer -> Compute loss parameters:")
+        print(f"Trainer -> - Sentiment loss: {compute_loss.sentiment_criterion}")
+        print(f"Trainer -> - Entity loss: {compute_loss.entity_criterion}")
+        print(f"Trainer -> - Max gradient norm: {compute_loss.max_grad_norm}")
+
         # eval validation set
         if args.init_eval:
             self._eval(model, test_dataset, input_reader, 0, updates_epoch)
@@ -123,6 +164,28 @@ class D2E2S_Trainer(BaseTrainer):
             entity_logits, senti_logits, batch_loss = model(encodings=batch['encodings'], context_masks=batch['context_masks'],
                                               entity_masks=batch['entity_masks'], entity_sizes=batch['entity_sizes'],
                                               sentiments=batch['rels'], senti_masks=batch['senti_masks'], adj=batch['adj'])
+                        # Print input shapes
+            print("\nInput Shapes:")
+            print(f"Encodings shape: {batch['encodings'].shape}")
+            print(f"Context masks shape: {batch['context_masks'].shape}")
+            print(f"Entity masks shape: {batch['entity_masks'].shape}")
+            print(f"Entity sizes shape: {batch['entity_sizes'].shape}")
+            print(f"Sentiments shape: {batch['rels'].shape}")
+            print(f"Sentiment masks shape: {batch['senti_masks'].shape}")
+            print(f"Adjacency matrix shape: {batch['adj'].shape}")
+
+            # Print output values and shapes
+            print("\nOutput Values:")
+            print(f"Entity logits shape: {entity_logits.shape}")
+            print(f"Entity logits values:\n{entity_logits}")
+            print(f"\nSentiment logits shape: {senti_logits.shape}")
+            print(f"Sentiment logits values:\n{senti_logits}")
+            print(f"\nBatch loss: {batch_loss}")
+
+            # Optional: Print statistics about the outputs
+            print("\nStatistics:")
+            print(f"Entity logits - Mean: {entity_logits.mean():.4f}, Max: {entity_logits.max():.4f}, Min: {entity_logits.min():.4f}")
+            print(f"Sentiment logits - Mean: {senti_logits.mean():.4f}, Max: {senti_logits.max():.4f}, Min: {senti_logits.min():.4f}")                                  
 
             # compute loss and optimize parameters
             epoch_loss = compute_loss.compute(entity_logits=entity_logits, senti_logits=senti_logits, batch_loss=batch_loss,
@@ -183,6 +246,16 @@ class D2E2S_Trainer(BaseTrainer):
                                entity_spans=batch['entity_spans'], entity_sample_masks=batch['entity_sample_masks'],
                                evaluate=True, adj=batch['adj'])
                 entity_clf, senti_clf, rels = result
+                                # Print shapes and sample values
+                print("\nBatch Results:")
+                print(f"Entity Classifications Shape: {entity_clf.shape}")
+                print(f"Sentiment Classifications Shape: {senti_clf.shape}")
+                print(f"Relations Shape: {rels.shape}")
+                
+                print("\nSample Values:")
+                print(f"Entity Classifications (first item):\n{entity_clf[0]}")
+                print(f"Sentiment Classifications (first item):\n{senti_clf[0]}")
+                print(f"Relations (first item):\n{rels[0]}")
                 # evaluate batch, entity:tensor(16, 188, 3), senti_clf:tensor(16, 2, 4), rels:tensor(16, 2, 2)
                 evaluator.eval_batch(entity_clf, senti_clf, rels, batch)
             global_iteration = epoch * updates_epoch + iteration
@@ -228,15 +301,31 @@ class D2E2S_Trainer(BaseTrainer):
                 evaluator.store_examples()
 
     def _get_optimizer_params(self, model):
+        print("Setting up optimizer parameters...")
+        
+        # Get all model parameters
         param_optimizer = list(model.named_parameters())
+        print(f"\nTotal number of parameter groups: {len(param_optimizer)}")
+        
+        # Parameters to exclude from weight decay
         no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
+        print(f"\nParameters excluded from weight decay: {no_decay}")
+        
+        # Create parameter groups
+        params_with_decay = [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)]
+        params_without_decay = [p for n, p in param_optimizer if any(nd in n for nd in no_decay)]
+        
+        print("\nParameter Group Statistics:")
+        print(f"Parameters with weight decay: {len(params_with_decay)}")
+        print(f"Parameters without weight decay: {len(params_without_decay)}")
+        print(f"Weight decay value: {self.args.weight_decay}")
+        
         optimizer_params = [
-            {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)],
-             'weight_decay': self.args.weight_decay},
-            {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}]
-
+            {'params': params_with_decay, 'weight_decay': self.args.weight_decay},
+            {'params': params_without_decay, 'weight_decay': 0.0}
+        ]
+        
         return optimizer_params
-
 
 if __name__ == '__main__':
     arg_parser = train_argparser()
