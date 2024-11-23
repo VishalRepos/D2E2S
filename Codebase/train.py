@@ -8,8 +8,15 @@ import transformers
 from torch.optim import optimizer
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-from transformers import AdamW, BertConfig
-from transformers import BertTokenizer
+from transformers import (
+    AutoTokenizer, 
+    AutoConfig, 
+    AutoModel,
+    DebertaV2Config, 
+    DebertaV2Model,
+    AdamW,
+    get_linear_schedule_with_warmup
+)
 
 from Parameter import train_argparser
 from models.D2E2S_Model import D2E2SModel
@@ -35,10 +42,7 @@ class D2E2S_Trainer(BaseTrainer):
         
         # Setup tokenizer
         print("\nSetting up tokenizer...")
-        self._tokenizer = BertTokenizer.from_pretrained(
-            './bert-base-uncased', 
-            do_lower_case=args.lowercase
-        )
+        self._tokenizer = AutoTokenizer.from_pretrained("microsoft/deberta-v2-xlarge")
         print(f"Tokenizer vocabulary size: {len(self._tokenizer)}")
         
         # Setup paths
@@ -100,14 +104,9 @@ class D2E2S_Trainer(BaseTrainer):
         test_dataset = input_reader.get_dataset(test_label)
 
         # load model
-        config = BertConfig.from_pretrained(self.args.pretrained_bert_name, from_tf=True)
-        model = D2E2SModel.from_pretrained(self.args.pretrained_bert_name,
-                                           config=config,
-                                           cls_token=self._tokenizer.convert_tokens_to_ids('[CLS]'),
-                                           sentiment_types=input_reader.sentiment_type_count - 1,
-                                           entity_types=input_reader.entity_type_count,
-                                           args = args
-                                           )
+        config = DebertaV2Config.from_pretrained("microsoft/deberta-v2-xlarge")
+        # Initialize model
+        model = D2E2SModel(config, sentiment_types, entity_types, args)
         model.to(args.device)
         # create optimizer
         optimizer_params = self._get_optimizer_params(model)
