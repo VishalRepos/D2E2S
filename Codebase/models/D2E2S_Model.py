@@ -204,26 +204,26 @@ class D2E2SModel(BertPreTrainedModel):
 
             return entity_clf, senti_clf, batch_loss
 
-        def _debug_forward(self, h, h_syn_gcn, h_sem_gcn, entity_clf, senti_clf, batch_loss):
-            """Debug information during forward pass"""
-            print("\nDebug Information:")
-            print(f"DeBERTa output shape: {h.shape}")
-            print(f"Syntactic GCN output shape: {h_syn_gcn.shape}")
-            print(f"Semantic GCN output shape: {h_sem_gcn.shape}")
-            print(f"Entity classification output shape: {entity_clf.shape}")
-            print(f"Sentiment classification output shape: {senti_clf.shape}")
-            print(f"Batch loss: {batch_loss}")
+    def _debug_forward(self, h, h_syn_gcn, h_sem_gcn, entity_clf, senti_clf, batch_loss):
+        """Debug information during forward pass"""
+        print("\nDebug Information:")
+        print(f"DeBERTa output shape: {h.shape}")
+        print(f"Syntactic GCN output shape: {h_syn_gcn.shape}")
+        print(f"Semantic GCN output shape: {h_sem_gcn.shape}")
+        print(f"Entity classification output shape: {entity_clf.shape}")
+        print(f"Sentiment classification output shape: {senti_clf.shape}")
+        print(f"Batch loss: {batch_loss}")
 
-        def get_attention_weights(self, encodings, context_masks):
-            """Get attention weights from DeBERTaV2"""
-            with torch.no_grad():
-                outputs = self.deberta(
-                    input_ids=encodings,
-                    attention_mask=context_masks,
-                    output_attentions=True,
-                    return_dict=True
-                )
-                return outputs.attentions
+    def get_attention_weights(self, encodings, context_masks):
+        """Get attention weights from DeBERTaV2"""
+        with torch.no_grad():
+            outputs = self.deberta(
+                input_ids=encodings,
+                attention_mask=context_masks,
+                output_attentions=True,
+                return_dict=True
+            )
+            return outputs.attentions
 
     def _forward_eval(self, encodings: torch.tensor, context_masks: torch.tensor, 
                     entity_masks: torch.tensor, entity_sizes: torch.tensor, 
