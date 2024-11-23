@@ -1,6 +1,4 @@
-from transformers import BertModel
-from transformers import BertPreTrainedModel
-from transformers import BertConfig
+from transformers import DebertaV2Model, DebertaV2PreTrainedModel, DebertaV2Config
 from torch import nn as nn
 import torch
 from trainer import util, sampling
@@ -33,207 +31,308 @@ def get_token(h: torch.tensor, x: torch.tensor, token: int):
 
 class D2E2SModel(BertPreTrainedModel):
     VERSION = '1.1'
-    def __init__(self, config: BertConfig, cls_token: int, sentiment_types: int, entity_types: int, args):
-        super(D2E2SModel, self).__init__(config)
-        # 1、parameters init
-        self.args = args
-        self._size_embedding = self.args.size_embedding
-        self._prop_drop = self.args.prop_drop
-        self._freeze_transformer = self.args.freeze_transformer
-        self.drop_rate = self.args.drop_out_rate
-        self._is_bidirectional = self.args.is_bidirect
-        self.layers = self.args.lstm_layers
-        self._hidden_dim = self.args.hidden_dim
-        self.mem_dim = self.args.mem_dim
-        self._emb_dim = self.args.emb_dim
-        self.output_size = self._emb_dim
-        self.batch_size = self.args.batch_size
-        self.USE_CUDA = USE_CUDA
-        self.max_pairs = 100
-        self.bert_feature_dim = self.args.bert_feature_dim
-        self.gcn_dim = self.args.gcn_dim
-        self.gcn_dropout = self.args.gcn_dropout
+    def __init__(self, config: DebertaV2Config, cls_token: int, sentiment_types: int, entity_types: int, args):
+            super(D2E2SModel, self).__init__(config)
+            
+            # 1、parameters init
+            self.args = args
+            self._size_embedding = self.args.size_embedding
+            self._prop_drop = self.args.prop_drop
+            self._freeze_transformer = self.args.freeze_transformer
+            self.drop_rate = self.args.drop_out_rate
+            self._is_bidirectional = self.args.is_bidirect
+            self.layers = self.args.lstm_layers
+            self._hidden_dim = self.args.hidden_dim
+            self.mem_dim = self.args.mem_dim
+            self._emb_dim = self.args.emb_dim
+            self.output_size = self._emb_dim
+            self.batch_size = self.args.batch_size
+            self.USE_CUDA = USE_CUDA
+            self.max_pairs = 100
+            self.bert_feature_dim = self.args.bert_feature_dim
+            self.gcn_dim = self.args.gcn_dim
+            self.gcn_dropout = self.args.gcn_dropout
 
-        # 2、BERT model
-        self.bert = BertModel(config)
-        # self.BertAdapterModel = BertAdapterModel(config)
-        self.Syn_gcn = GCN()
-        self.Sem_gcn = SemGCN(self.args)
-        self.senti_classifier = nn.Linear(config.hidden_size * 3 + self._size_embedding * 2, sentiment_types)
-        self.entity_classifier = nn.Linear(config.hidden_size * 2 + self._size_embedding, entity_types)
-        self.size_embeddings = nn.Embedding(100, self._size_embedding)
-        self.dropout = nn.Dropout(self._prop_drop)
-        self._cls_token = cls_token
-        self._sentiment_types = sentiment_types
-        self._entity_types = entity_types
-        self._max_pairs = self.max_pairs
-        self.neg_span_all = 0
-        self.neg_span = 0
-        self.number = 1 
-        print(f"Model -> config.hidden_size: {config.hidden_size}")
+            # 2、DeBERTa model (changed from BERT)
+            self.deberta = DebertaV2Model(config)  # Changed from BertModel
+            self.Syn_gcn = GCN()
+            self.Sem_gcn = SemGCN(self.args)
+            
+            # Adjust classifier dimensions based on DeBERTa config
+            self.senti_classifier = nn.Linear(config.hidden_size * 3 + self._size_embedding * 2, sentiment_types)
+            self.entity_classifier = nn.Linear(config.hidden_size * 2 + self._size_embedding, entity_types)
+            self.size_embeddings = nn.Embedding(100, self._size_embedding)
+            self.dropout = nn.Dropout(self._prop_drop)
+            self._cls_token = cls_token
+            self._sentiment_types = sentiment_types
+            self._entity_types = entity_types
+            self._max_pairs = self.max_pairs
+            self.neg_span_all = 0
+            self.neg_span = 0
+            self.number = 1 
+            print(f"Model -> DeBERTa hidden_size: {config.hidden_size}")
 
-        # 3、LSTM Layers + Attention Layers
-        self.lstm = nn.LSTM(self._emb_dim, int(self._hidden_dim), self.layers, batch_first=True,
-                            bidirectional=self._is_bidirectional, dropout=self.drop_rate)
-        self.attention_layer = SelfAttention(self.args)
-        self.dropout1 = torch.nn.Dropout(0.5)
-        self.dropout2 = torch.nn.Dropout(0)
-        self.lstm_dropout = nn.Dropout(self.drop_rate)
+            # 3、LSTM Layers + Attention Layers
+            self.lstm = nn.LSTM(self._emb_dim, 
+                            int(self._hidden_dim), 
+                            self.layers, 
+                            batch_first=True,
+                            bidirectional=self._is_bidirectional, 
+                            dropout=self.drop_rate)
+            self.attention_layer = SelfAttention(self.args)
+            self.dropout1 = torch.nn.Dropout(0.5)
+            self.dropout2 = torch.nn.Dropout(0)
+            self.lstm_dropout = nn.Dropout(self.drop_rate)
 
-        # 4、linear and sigmoid layers
-        if self._is_bidirectional:
-            self.fc = nn.Linear(int(self._hidden_dim * 2), self.output_size)
-        else:
-            self.fc = nn.Linear(int(self._hidden_dim), self.output_size)
+            # 4、linear and sigmoid layers
+            if self._is_bidirectional:
+                self.fc = nn.Linear(int(self._hidden_dim * 2), self.output_size)
+            else:
+                self.fc = nn.Linear(int(self._hidden_dim), self.output_size)
 
-        # 5、init_hidden
-        weight = next(self.parameters()).data
-        if self._is_bidirectional:
-            self.number = 2
+            # 5、init_hidden
+            weight = next(self.parameters()).data
+            if self._is_bidirectional:
+                self.number = 2
 
-        if self.USE_CUDA:
-            self.hidden = (
-                weight.new(self.layers * self.number, self.batch_size, self._hidden_dim).zero_().float().cuda(),
-                # self.hidden = 384
-                weight.new(self.layers * self.number, self.batch_size, self._hidden_dim).zero_().float().cuda()
+            if self.USE_CUDA:
+                self.hidden = (
+                    weight.new(self.layers * self.number, self.batch_size, self._hidden_dim).zero_().float().cuda(),
+                    weight.new(self.layers * self.number, self.batch_size, self._hidden_dim).zero_().float().cuda()
+                )
+            else:
+                self.hidden = (
+                    weight.new(self.layers * self.number, self.batch_size, self._hidden_dim).zero_().float(),
+                    weight.new(self.layers * self.number, self.batch_size, self._hidden_dim).zero_().float()
+                )
+
+            # 6、weight initialization
+            self.init_weights()  # Make sure this is compatible with DeBERTa
+            if self._freeze_transformer:
+                print("Freeze DeBERTa transformer weights")
+                # freeze all transformer weights
+                for param in self.deberta.parameters():
+                    param.requires_grad = False
+
+            # 7、feature merge model
+            self.TIN = TIN(self.bert_feature_dim)
+            
+            # Add DeBERTa specific configurations
+            self.config = config
+            
+            # Initialize DeBERTa specific components if needed
+            self.relative_attention = getattr(config, 'relative_attention', False)
+            self.position_biased_input = getattr(config, 'position_biased_input', True)
+            
+            print(f"\nDeBERTa Model Configuration:")
+            print(f"Hidden Size: {config.hidden_size}")
+            print(f"Num Attention Heads: {config.num_attention_heads}")
+            print(f"Intermediate Size: {config.intermediate_size}")
+            print(f"Max Position Embeddings: {config.max_position_embeddings}")
+            print(f"Relative Attention: {self.relative_attention}")
+            print(f"Position Biased Input: {self.position_biased_input}")
+
+    def _forward_train(self, encodings: torch.tensor, context_masks: torch.tensor, 
+                    entity_masks: torch.tensor, entity_sizes: torch.tensor, 
+                    sentiments: torch.tensor, senti_masks: torch.tensor, adj):
+            """
+            Forward training pass with DeBERTaV2
+            """
+            # Parameters init
+            context_masks = context_masks.float()
+            self.context_masks = context_masks
+            batch_size = encodings.shape[0]
+            seq_lens = encodings.shape[1]
+
+            # Encoder layer with DeBERTaV2
+            deberta_outputs = self.deberta(
+                input_ids=encodings,
+                attention_mask=self.context_masks,
+                return_dict=True
             )
-        else:
-            self.hidden = (weight.new(self.layers * self.number, self.batch_size, self._hidden_dim).zero_().float(),
-                           weight.new(self.layers * self.number, self.batch_size, self._hidden_dim).zero_().float()
-                           )
+            h = deberta_outputs.last_hidden_state
 
-        # 6、weight initialization
-        self.init_weights()
-        if self._freeze_transformer:
-            print("Freeze transformer weights")
+            # LSTM layer
+            self.output, _ = self.lstm(h, self.hidden)
+            self.bert_lstm_output = self.lstm_dropout(self.output)
+            self.bert_lstm_att_feature = self.bert_lstm_output
 
-            # freeze all transformer weights
-            for param in self.bert.parameters():
-                param.requires_grad = False
+            # GCN layers
+            h_syn_ori, pool_mask_origin = self.Syn_gcn(adj, h)
+            h_syn_gcn, pool_mask = self.Syn_gcn(adj, self.bert_lstm_att_feature)
+            h_sem_ori, adj_sem_ori = self.Sem_gcn(h, encodings, seq_lens)
+            h_sem_gcn, adj_sem_gcn = self.Sem_gcn(self.bert_lstm_att_feature, encodings, seq_lens)
 
-        # # 7、Mutual Biaffine Model
-        # self.affine1 = nn.Parameter(torch.Tensor(self.mem_dim, self.mem_dim))
-        # self.affine2 = nn.Parameter(torch.Tensor(self.mem_dim, self.mem_dim))
-        # self.gcn_drop = nn.Dropout(self.args.gcn_dropout)
-        # # 7、MLP with Biaffine Attention
-        # self.Biaffine_ATT = BiaffineAttention(self.bert_feature_dim, self.bert_feature_dim)
+            # Fusion layer
+            h1 = self.TIN(h, h_syn_ori, h_syn_gcn, h_sem_ori, h_sem_gcn, adj_sem_ori, adj_sem_gcn)
+            h = self.attention_layer(h1, h1, self.context_masks[:, :seq_lens]) + h1
 
-        # 7、feature merge model
-        self.TIN = TIN(self.bert_feature_dim)
-        # self.TextCentredSP = TextCentredSP(self.bert_feature_dim*2, self.shared_dim, self.private_dim)
+            # Entity classification
+            size_embeddings = self.size_embeddings(entity_sizes)
+            entity_clf, entity_spans_pool = self._classify_entities(
+                encodings, h, entity_masks, size_embeddings, self.args
+            )
 
-    def _forward_train(self, encodings: torch.tensor, context_masks: torch.tensor, entity_masks: torch.tensor,
-                       entity_sizes: torch.tensor, sentiments: torch.tensor, senti_masks: torch.tensor, adj):
+            # Sentiment classification
+            h_large = h.unsqueeze(1).repeat(
+                1, max(min(sentiments.shape[1], self._max_pairs), 1), 1, 1
+            )
+            senti_clf = torch.zeros(
+                [batch_size, sentiments.shape[1], self._sentiment_types]
+            ).to(self.senti_classifier.weight.device)
 
-        # Parameters init
-        context_masks = context_masks.float()
-        self.context_masks = context_masks
-        batch_size = encodings.shape[0]
-        seq_lens = encodings.shape[1]
+            # Process sentiment chunks
+            for i in range(0, sentiments.shape[1], self._max_pairs):
+                chunk_senti_logits = self._classify_sentiments(
+                    entity_spans_pool, 
+                    size_embeddings,
+                    sentiments, 
+                    senti_masks, 
+                    h_large, 
+                    i
+                )
+                senti_clf[:, i:i + self._max_pairs, :] = chunk_senti_logits
 
-        # encoder layer
-        # h = self.BertAdapterModel(input_ids=encodings, attention_mask=self.context_masks)[0]
-        h = self.bert(input_ids=encodings, attention_mask=self.context_masks)[0]
-        self.output, _ = self.lstm(h, self.hidden)
-        self.bert_lstm_output = self.lstm_dropout(self.output)
-        self.bert_lstm_att_feature = self.bert_lstm_output
+            # Compute loss
+            batch_loss = compute_loss(adj_sem_ori, adj_sem_gcn, adj)
 
-        # attention layers
-        # bert_lstm_feature_attention = self.attention_layer(self.bert_lstm_output, self.bert_lstm_output, self.context_masks[:,:seq_lens])
-        # self.bert_lstm_att_feature = self.bert_lstm_output + bert_lstm_feature_attention
+            # Add debugging information
+            if self.training and hasattr(self, 'debug_mode') and self.debug_mode:
+                self._debug_forward(
+                    h, h_syn_gcn, h_sem_gcn, entity_clf, senti_clf, batch_loss
+                )
 
-        # gcn layer
-        h_syn_ori, pool_mask_origin = self.Syn_gcn(adj, h)
-        h_syn_gcn, pool_mask = self.Syn_gcn(adj, self.bert_lstm_att_feature)
-        h_sem_ori, adj_sem_ori = self.Sem_gcn(h, encodings, seq_lens)
-        h_sem_gcn, adj_sem_gcn = self.Sem_gcn(self.bert_lstm_att_feature, encodings, seq_lens)
+            return entity_clf, senti_clf, batch_loss
 
-        # fusion layer
-        h1 = self.TIN(h, h_syn_ori, h_syn_gcn, h_sem_ori, h_sem_gcn, adj_sem_ori, adj_sem_gcn)
-        h = self.attention_layer(h1, h1, self.context_masks[:, :seq_lens]) + h1
-        # h_feature, h_syn_origin, h_syn_feature, h_sem_origin, h_sem_feature = self.TIN(h, h_syn_ori, h_syn_gcn, h_sem_ori, h_sem_gcn)
-        # h = self.TextCentredSP(h_syn_feature, h_sem_feature)
+        def _debug_forward(self, h, h_syn_gcn, h_sem_gcn, entity_clf, senti_clf, batch_loss):
+            """Debug information during forward pass"""
+            print("\nDebug Information:")
+            print(f"DeBERTa output shape: {h.shape}")
+            print(f"Syntactic GCN output shape: {h_syn_gcn.shape}")
+            print(f"Semantic GCN output shape: {h_sem_gcn.shape}")
+            print(f"Entity classification output shape: {entity_clf.shape}")
+            print(f"Sentiment classification output shape: {senti_clf.shape}")
+            print(f"Batch loss: {batch_loss}")
 
-        size_embeddings = self.size_embeddings(entity_sizes)
-        entity_clf, entity_spans_pool = self._classify_entities(encodings, h, entity_masks, size_embeddings, self.args)
+        def get_attention_weights(self, encodings, context_masks):
+            """Get attention weights from DeBERTaV2"""
+            with torch.no_grad():
+                outputs = self.deberta(
+                    input_ids=encodings,
+                    attention_mask=context_masks,
+                    output_attentions=True,
+                    return_dict=True
+                )
+                return outputs.attentions
 
-        # relation_classify
-        h_large = h.unsqueeze(1).repeat(1, max(min(sentiments.shape[1], self._max_pairs), 1), 1, 1)
-        senti_clf = torch.zeros([batch_size, sentiments.shape[1], self._sentiment_types]).to(self.senti_classifier.weight.device)
+    def _forward_eval(self, encodings: torch.tensor, context_masks: torch.tensor, 
+                    entity_masks: torch.tensor, entity_sizes: torch.tensor, 
+                    entity_spans: torch.tensor, entity_sample_masks: torch.tensor, adj):
+            """
+            Forward evaluation pass with DeBERTaV2
+            """
+            # Parameter initialization
+            context_masks = context_masks.float()
+            self.context_masks = context_masks
+            batch_size = encodings.shape[0]
+            seq_lens = encodings.shape[1]
 
-        # obtain sentiment logits
-        # chunk processing to reduce memory usage
-        for i in range(0, sentiments.shape[1], self._max_pairs):
-            # classify sentiment candidates
-            chunk_senti_logits = self._classify_sentiments(entity_spans_pool, size_embeddings,
-                                                        sentiments, senti_masks, h_large, i)
-            senti_clf[:, i:i + self._max_pairs, :] = chunk_senti_logits
+            # DeBERTa encoder layer
+            deberta_outputs = self.deberta(
+                input_ids=encodings,
+                attention_mask=self.context_masks,
+                return_dict=True
+            )
+            h = deberta_outputs.last_hidden_state
 
-        batch_loss = compute_loss(adj_sem_ori, adj_sem_gcn, adj)
+            # LSTM processing
+            self.output, _ = self.lstm(h, self.hidden)
+            self.bert_lstm_output = self.lstm_dropout(self.output)
+            self.bert_lstm_att_feature = self.bert_lstm_output
 
-        return entity_clf, senti_clf, batch_loss
+            # GCN processing
+            h_syn_ori, pool_mask_origin = self.Syn_gcn(adj, h)
+            h_syn_gcn, pool_mask = self.Syn_gcn(adj, self.bert_lstm_att_feature)
+            h_sem_ori, adj_sem_ori = self.Sem_gcn(h, encodings, seq_lens)
+            h_sem_gcn, adj_sem_gcn = self.Sem_gcn(self.bert_lstm_att_feature, encodings, seq_lens)
 
-    def _forward_eval(self, encodings: torch.tensor, context_masks: torch.tensor, entity_masks: torch.tensor,
-                      entity_sizes: torch.tensor, entity_spans: torch.tensor, entity_sample_masks: torch.tensor, adj):
-        context_masks = context_masks.float()
-        self.context_masks = context_masks
-        batch_size = encodings.shape[0]
-        seq_lens = encodings.shape[1]
+            # Feature fusion
+            h1 = self.TIN(h, h_syn_ori, h_syn_gcn, h_sem_ori, h_sem_gcn, 
+                        adj_sem_ori, adj_sem_gcn)
+            h = self.attention_layer(h1, h1, self.context_masks[:, :seq_lens]) + h1
 
-        # encoder layer
-        # h = self.BertAdapterModel(input_ids=encodings, attention_mask=self.context_masks)[0]
-        h = self.bert(input_ids=encodings, attention_mask=self.context_masks)[0]
-        self.output, _ = self.lstm(h, self.hidden)
-        self.bert_lstm_output = self.lstm_dropout(self.output)
-        self.bert_lstm_att_feature = self.bert_lstm_output
+            # Entity classification
+            size_embeddings = self.size_embeddings(entity_sizes)
+            entity_clf, entity_spans_pool = self._classify_entities(
+                encodings, h, entity_masks, size_embeddings, self.args
+            )
 
-        # attention layers
-        # bert_lstm_feature_attention = self.attention_layer(self.bert_lstm_output, self.bert_lstm_output, self.context_masks[:,:seq_lens])
-        # self.bert_lstm_att_feature = self.bert_lstm_output + bert_lstm_feature_attention
-        # self.bert_lstm_att_feature = bert_lstm_feature_attention
+            # Filter spans for sentiment analysis
+            ctx_size = context_masks.shape[-1]
+            sentiments, senti_masks, senti_sample_masks = self._filter_spans(
+                entity_clf, entity_spans, entity_sample_masks, ctx_size
+            )
+            
+            # Prepare for sentiment classification
+            senti_sample_masks = senti_sample_masks.float().unsqueeze(-1)
+            h_large = h.unsqueeze(1).repeat(
+                1, max(min(sentiments.shape[1], self._max_pairs), 1), 1, 1
+            )
+            senti_clf = torch.zeros(
+                [batch_size, sentiments.shape[1], self._sentiment_types]
+            ).to(self.senti_classifier.weight.device)
 
-        # gcn layer
-        h_syn_ori, pool_mask_origin = self.Syn_gcn(adj, h)
-        h_syn_gcn, pool_mask = self.Syn_gcn(adj, self.bert_lstm_att_feature)
-        h_sem_ori, adj_sem_ori = self.Sem_gcn(h, encodings, seq_lens)
-        h_sem_gcn, adj_sem_gcn = self.Sem_gcn(self.bert_lstm_att_feature, encodings, seq_lens)
+            # Chunk processing for sentiment classification
+            for i in range(0, sentiments.shape[1], self._max_pairs):
+                chunk_senti_logits = self._classify_sentiments(
+                    entity_spans_pool,
+                    size_embeddings,
+                    sentiments,
+                    senti_masks,
+                    h_large,
+                    i
+                )
+                # Apply sigmoid activation
+                chunk_senti_clf = torch.sigmoid(chunk_senti_logits)
+                senti_clf[:, i:i + self._max_pairs, :] = chunk_senti_clf
 
-        # fusion layer
-        h1 = self.TIN(h, h_syn_ori, h_syn_gcn, h_sem_ori, h_sem_gcn, adj_sem_ori, adj_sem_gcn)
-        h = self.attention_layer(h1, h1, self.context_masks[:, :seq_lens]) + h1
-        # h_feature, h_syn_origin, h_syn_feature, h_sem_origin, h_sem_feature = self.TIN(h, h_syn_ori, h_syn_gcn, h_sem_ori, h_sem_gcn)
-        # h = self.TextCentredSP(h_syn_feature, h_sem_feature)
+            # Apply masks and softmax
+            senti_clf = senti_clf * senti_sample_masks
+            entity_clf = torch.softmax(entity_clf, dim=2)
 
-        # entity_classify
-        size_embeddings = self.size_embeddings(entity_sizes)  # embed entity candidate sizes
-        entity_clf, entity_spans_pool = self._classify_entities(encodings, h, entity_masks, size_embeddings, self.args)
+            # Add evaluation metrics if in debug mode
+            if hasattr(self, 'debug_mode') and self.debug_mode:
+                self._debug_eval(h, entity_clf, senti_clf)
 
-        # ignore entity candidates that do not constitute an actual entity for sentiments (based on classifier)
-        ctx_size = context_masks.shape[-1]
-        sentiments, senti_masks, senti_sample_masks = self._filter_spans(entity_clf, entity_spans,
-                                                                    entity_sample_masks, ctx_size)
-        senti_sample_masks = senti_sample_masks.float().unsqueeze(-1)
-        h_large = h.unsqueeze(1).repeat(1, max(min(sentiments.shape[1], self._max_pairs), 1), 1, 1)
-        senti_clf = torch.zeros([batch_size, sentiments.shape[1], self._sentiment_types]).to(
-            self.senti_classifier.weight.device)
+            return entity_clf, senti_clf, sentiments
 
-        # obtain sentiment logits
-        # chunk processing to reduce memory usage
-        for i in range(0, sentiments.shape[1], self._max_pairs):
-            # classify sentiment candidates
-            chunk_senti_logits = self._classify_sentiments(entity_spans_pool, size_embeddings,
-                                                        sentiments, senti_masks, h_large, i)
-            # apply sigmoid
-            chunk_senti_clf = torch.sigmoid(chunk_senti_logits)
-            senti_clf[:, i:i + self._max_pairs, :] = chunk_senti_clf
+        def _debug_eval(self, h, entity_clf, senti_clf):
+            """Debug information for evaluation"""
+            print("\nEvaluation Debug Information:")
+            print(f"DeBERTa output shape: {h.shape}")
+            print(f"Entity classification probabilities:")
+            print(f"- Shape: {entity_clf.shape}")
+            print(f"- Max: {entity_clf.max().item():.4f}")
+            print(f"- Min: {entity_clf.min().item():.4f}")
+            print(f"Sentiment classification probabilities:")
+            print(f"- Shape: {senti_clf.shape}")
+            print(f"- Max: {senti_clf.max().item():.4f}")
+            print(f"- Min: {senti_clf.min().item():.4f}")
 
-        senti_clf = senti_clf * senti_sample_masks  # mask
+        def get_evaluation_metrics(self, entity_clf, senti_clf):
+            """Calculate evaluation metrics"""
+            return {
+                'entity_confidence': entity_clf.max(dim=2)[0].mean().item(),
+                'sentiment_confidence': senti_clf.max(dim=2)[0].mean().item(),
+                'entity_entropy': self._calculate_entropy(entity_clf),
+                'sentiment_entropy': self._calculate_entropy(senti_clf)
+            }
 
-        # apply softmax
-        entity_clf = torch.softmax(entity_clf, dim=2)
-
-        return entity_clf, senti_clf, sentiments
-
+        def _calculate_entropy(self, probs):
+            """Calculate entropy of predictions"""
+            entropy = -torch.sum(probs * torch.log(probs + 1e-10), dim=2)
+            return entropy.mean().item()
+            
     def _classify_entities(self, encodings, h, entity_masks, size_embeddings, args):
         # entity_masks: tensor(4,132,24) 4:batch_size, 132: entities count, 24: one sentence token count and one entity need 24 mask
         # size_embedding: tensor(4,132,25) 4：batch_size, 132:entities_size, 25:each entities Embedding Dimension
