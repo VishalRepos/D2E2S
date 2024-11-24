@@ -357,10 +357,10 @@ class D2E2SModel(DebertaV2PreTrainedModel):
     def _classify_entities(self, encodings, h, entity_masks, size_embeddings, args):
         # entity_masks: tensor(4,132,24) 4:batch_size, 132: entities count, 24: one sentence token count and one entity need 24 mask
         # size_embedding: tensor(4,132,25) 4：batch_size, 132:entities_size, 25:each entities Embedding Dimension
-        # h: tensor(4,24,768) -> (4,1,24,768) -> (4,132,24,768)
+        # h: tensor(4,24,1536) -> (4,1,24,1536) -> (4,132,24,1536)
         # m: tensor(4,132,24,1)
         # encoding: tensor(4,24)
-        # entity_spans_pool: tensor(4，132，24，768) -> tensor(4,132,768)
+        # entity_spans_pool: tensor(4，132，24，768) -> tensor(4,132,1536)
         m = (entity_masks.unsqueeze(-1) == 0).float() * (-1e30)
         entity_spans_pool = m + h.unsqueeze(1).repeat(1, entity_masks.shape[1], 1, 1)
 

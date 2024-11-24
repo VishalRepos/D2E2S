@@ -34,7 +34,7 @@ def train_argparser():
     parser.add_argument('--is_bidirect', default=True, help='Use bi-RNN layer')
     parser.add_argument('--use_gated', default=False, help='Use gcnconv and gatedgraphconv')
     parser.add_argument('--hidden_dim', type=int, default=384, help='Hidden layer dimension')  # Updated for DeBERTa V2
-    parser.add_argument('--emb_dim', type=int, default=768, help='Word embedding dimension')  # Updated for DeBERTa V2
+    parser.add_argument('--emb_dim', type=int, default=1536, help='Word embedding dimension')  # Updated for DeBERTa V2
     parser.add_argument('--lstm_layers', type=int, default=2, help='Number of LSTM layers')
     parser.add_argument('--lstm_dim', type=int, default=384, help='Dimension of lstm cell')
     
@@ -46,7 +46,7 @@ def train_argparser():
     # Network parameters
     parser.add_argument('--attention_heads', default=12, type=int, help='Number of attention heads')  # Updated for DeBERTa V2
     parser.add_argument('--num_layers', type=int, default=2, help='Number of GCN layers')
-    parser.add_argument('--mem_dim', type=int, default=768, help='Mutual biaffine memory dimension')  # Updated for DeBERTa V2
+    parser.add_argument('--mem_dim', type=int, default=1536, help='Mutual biaffine memory dimension')  # Updated for DeBERTa V2
     parser.add_argument('--gcn_dropout', type=float, default=0.2, help='GCN layer dropout rate')
     parser.add_argument('--pooling', default='avg', type=str, help='Pooling type: max, avg, sum')
     parser.add_argument('--gcn_dim', type=int, default=300, help='Dimension of GCN')
