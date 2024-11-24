@@ -50,7 +50,7 @@ def train_argparser():
     parser.add_argument('--gcn_dropout', type=float, default=0.2, help='GCN layer dropout rate')
     parser.add_argument('--pooling', default='avg', type=str, help='Pooling type: max, avg, sum')
     parser.add_argument('--gcn_dim', type=int, default=300, help='Dimension of GCN')
-    parser.add_argument('--bert_feature_dim', type=int, default=768, help='Dimension of pretrained features')  # Updated for DeBERTa V2
+    parser.add_argument('--bert_feature_dim', type=int, default=1536, help='Dimension of pretrained features')  # Updated for DeBERTa V2
     
     # Training settings
     parser.add_argument("--seed", default=42, type=int, help="Random seed for initialization")
