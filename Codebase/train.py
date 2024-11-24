@@ -105,6 +105,8 @@ class D2E2S_Trainer(BaseTrainer):
 
         # load model
         config = DebertaV2Config.from_pretrained("microsoft/deberta-v2-xlarge")
+        print(f"Trainer -> config: {config}")
+        print(f"Trainer -> config: {config.hidden_size}")
         # Initialize model with correct argument order
         model = D2E2SModel(
             config=config,
