@@ -51,8 +51,8 @@ class SemGCN(nn.Module):
 
         for l in range(self.layers):
             Ax = adj_ag_new.bmm(outputs)
-            print("shape of AX :",Ax.shape")
-            print("shape of self.W[l](Ax) :",self.W[l].weight.shape")
+            print("shape of AX :",Ax.shape)
+            print("shape of self.W[l](Ax) :",self.W[l].weight.shape)
             AxW = self.W[l](Ax)
             AxW = AxW / denom_ag
             gAxW = F.relu(AxW)
