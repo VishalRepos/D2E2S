@@ -110,6 +110,18 @@ class D2E2SModel(DebertaV2PreTrainedModel):
         print(f"LSTM Layers + Attention Layers bidirectional: {self._is_bidirectional}")
         print(f"LSTM Layers + Attention Layers dropout: {self.drop_rate}")
 
+        # To get the number of directions (1 if unidirectional, 2 if bidirectional)
+        num_directions = 2 if self._is_bidirectional else 1
+
+        # Print shape information for each parameter
+        print("\nLSTM Parameter Shapes:")
+        for name, param in self.lstm.named_parameters():
+            print(f"{name}: {param.shape}")
+
+        # If you need to know the output dimensions:
+        print(f"\nOutput dimension per direction: {self._hidden_dim}")
+        print(f"Total output dimension: {self._hidden_dim * num_directions}")
+
         # 4、linear and sigmoid layers
         if self._is_bidirectional:
             self.fc = nn.Linear(int(self._hidden_dim * 2), self.output_size)
