@@ -177,6 +177,9 @@ class D2E2SModel(DebertaV2PreTrainedModel):
             self.output, _ = self.lstm(h, self.hidden)
             self.bert_lstm_output = self.lstm_dropout(self.output)
             self.bert_lstm_att_feature = self.bert_lstm_output
+            print(f"Model LSTM layer elf.hidden: {self.hidden}")
+            print(f"Model LSTM layer self.output: {self.output.shape}")
+            print(f"Model LSTM layer self.bert_lstm_output: {self.bert_lstm_output.shape}")
 
             # GCN layers
             print(f"Model GCN layer adj: {adj.shape}")
