@@ -23,6 +23,8 @@ class GCN(nn.Module):
 
         for l in range(self.layers):
             Ax = adj.bmm(inputs)
+            print("shape of Syn AX :",Ax.shape)
+            print("shape of Syn self.W[l](Ax) :",self.W[l].weight.shape)
             AxW = self.W[l](Ax)
             AxW = AxW + self.W[l](inputs)  # self loop
             AxW = AxW / denom
