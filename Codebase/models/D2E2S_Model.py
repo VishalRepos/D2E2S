@@ -179,6 +179,9 @@ class D2E2SModel(DebertaV2PreTrainedModel):
             self.bert_lstm_att_feature = self.bert_lstm_output
 
             # GCN layers
+            print(f"Model GCN layer adj: {adj}")
+            print(f"Model GCN layer h: {config.intermediate_size}")
+            print(f"Model GCN layer self.bert_lstm_att_feature: {self.bert_lstm_att_feature}")
             h_syn_ori, pool_mask_origin = self.Syn_gcn(adj, h)
             h_syn_gcn, pool_mask = self.Syn_gcn(adj, self.bert_lstm_att_feature)
             h_sem_ori, adj_sem_ori = self.Sem_gcn(h, encodings, seq_lens)

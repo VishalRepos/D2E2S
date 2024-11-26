@@ -165,7 +165,9 @@ class D2E2S_Trainer(BaseTrainer):
         total = dataset.sentence_count // self.args.batch_size
         for batch in tqdm(data_loader, total=total, desc='Train epoch %s' % epoch):
             model.train()
+            print(f"Batch Before: {batch}")
             batch = util.to_device(batch, arg_parser.device)
+            print(f"Batch After: {batch}")
 
             # forward step
             entity_logits, senti_logits, batch_loss = model(encodings=batch['encodings'], context_masks=batch['context_masks'],
