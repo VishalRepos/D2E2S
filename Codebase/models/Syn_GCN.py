@@ -28,8 +28,8 @@ class GCN(nn.Module):
             AxW = self.W[l](Ax)
             AxW = AxW + self.W[l](inputs)  # self loop
             AxW = AxW / denom
-            print("shape of Syn denom :",denom)
-            print("shape of Syn AxW / denom :",AxW)
+            print("shape of Syn denom :",denom.shape)
+            print("shape of Syn AxW / denom :",AxW.shape)
             gAxW = F.relu(AxW)
             inputs = self.gcn_drop(gAxW) if l < self.layers - 1 else gAxW
 
