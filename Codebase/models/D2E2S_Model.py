@@ -48,12 +48,12 @@ class D2E2SModel(DebertaV2PreTrainedModel):
         if args is None:
             raise ValueError("args cannot be None")
             
-        print("\nModel Initialization Parameters:")
-        print(f"Config: {config}")
-        print(f"CLS token: {cls_token}")
-        print(f"Sentiment types: {sentiment_types}")
-        print(f"Entity types: {entity_types}")
-        print(f"Args: {vars(args)}")
+        # print("\nModel Initialization Parameters:")
+        # print(f"Config: {config}")
+        # print(f"CLS token: {cls_token}")
+        # print(f"Sentiment types: {sentiment_types}")
+        # print(f"Entity types: {entity_types}")
+        # print(f"Args: {vars(args)}")
 
         # 1、parameters init
         self.args = args
@@ -91,7 +91,7 @@ class D2E2SModel(DebertaV2PreTrainedModel):
         self.neg_span_all = 0
         self.neg_span = 0
         self.number = 1 
-        print(f"Model -> DeBERTa hidden_size: {config.hidden_size}")
+        # print(f"Model -> DeBERTa hidden_size: {config.hidden_size}")
 
         # 3、LSTM Layers + Attention Layers
         self.lstm = nn.LSTM(self._emb_dim, 
@@ -104,23 +104,23 @@ class D2E2SModel(DebertaV2PreTrainedModel):
         self.dropout1 = torch.nn.Dropout(0.5)
         self.dropout2 = torch.nn.Dropout(0)
         self.lstm_dropout = nn.Dropout(self.drop_rate)
-        print(f"LSTM Layers + Attention Layers self._emb_dim: {self._emb_dim}")
-        print(f"LSTM Layers + Attention Layers int(self._hidden_dim): {int(self._hidden_dim)}")
-        print(f"LSTM Layers + Attention Layers self.layers: {self.layers}")
-        print(f"LSTM Layers + Attention Layers bidirectional: {self._is_bidirectional}")
-        print(f"LSTM Layers + Attention Layers dropout: {self.drop_rate}")
+        # print(f"LSTM Layers + Attention Layers self._emb_dim: {self._emb_dim}")
+        # print(f"LSTM Layers + Attention Layers int(self._hidden_dim): {int(self._hidden_dim)}")
+        # print(f"LSTM Layers + Attention Layers self.layers: {self.layers}")
+        # print(f"LSTM Layers + Attention Layers bidirectional: {self._is_bidirectional}")
+        # print(f"LSTM Layers + Attention Layers dropout: {self.drop_rate}")
 
         # To get the number of directions (1 if unidirectional, 2 if bidirectional)
         num_directions = 2 if self._is_bidirectional else 1
 
         # Print shape information for each parameter
-        print("\nLSTM Parameter Shapes:")
+        # print("\nLSTM Parameter Shapes:")
         for name, param in self.lstm.named_parameters():
             print(f"{name}: {param.shape}")
 
         # If you need to know the output dimensions:
-        print(f"\nOutput dimension per direction: {self._hidden_dim}")
-        print(f"Total output dimension: {self._hidden_dim * num_directions}")
+        # print(f"\nOutput dimension per direction: {self._hidden_dim}")
+        # print(f"Total output dimension: {self._hidden_dim * num_directions}")
 
         # 4、linear and sigmoid layers
         if self._is_bidirectional:
@@ -143,10 +143,10 @@ class D2E2SModel(DebertaV2PreTrainedModel):
                 weight.new(self.layers * self.number, self.batch_size, self._hidden_dim ).zero_().float(),
                 weight.new(self.layers * self.number, self.batch_size, self._hidden_dim ).zero_().float()
             )
-        print(f"self.hidden self.layers: {self.layers}")
-        print(f"self.hidden self.number: {self.number}")
-        print(f"self.hidden self.batch_size: {self.batch_size}")
-        print(f"self.hidden self._hidden_dim: {self._hidden_dim}")
+        # print(f"self.hidden self.layers: {self.layers}")
+        # print(f"self.hidden self.number: {self.number}")
+        # print(f"self.hidden self.batch_size: {self.batch_size}")
+        # print(f"self.hidden self._hidden_dim: {self._hidden_dim}")
 
         # 6、weight initialization
         self.init_weights()  # Make sure this is compatible with DeBERTa
@@ -166,13 +166,13 @@ class D2E2SModel(DebertaV2PreTrainedModel):
         self.relative_attention = getattr(config, 'relative_attention', False)
         self.position_biased_input = getattr(config, 'position_biased_input', True)
         
-        print(f"\nDeBERTa Model Configuration:")
-        print(f"Hidden Size: {config.hidden_size}")
-        print(f"Num Attention Heads: {config.num_attention_heads}")
-        print(f"Intermediate Size: {config.intermediate_size}")
-        print(f"Max Position Embeddings: {config.max_position_embeddings}")
-        print(f"Relative Attention: {self.relative_attention}")
-        print(f"Position Biased Input: {self.position_biased_input}")
+        # print(f"\nDeBERTa Model Configuration:")
+        # print(f"Hidden Size: {config.hidden_size}")
+        # print(f"Num Attention Heads: {config.num_attention_heads}")
+        # print(f"Intermediate Size: {config.intermediate_size}")
+        # print(f"Max Position Embeddings: {config.max_position_embeddings}")
+        # print(f"Relative Attention: {self.relative_attention}")
+        # print(f"Position Biased Input: {self.position_biased_input}")
 
     def _forward_train(self, encodings: torch.tensor, context_masks: torch.tensor, 
                     entity_masks: torch.tensor, entity_sizes: torch.tensor, 
@@ -198,15 +198,15 @@ class D2E2SModel(DebertaV2PreTrainedModel):
             self.output, _ = self.lstm(h, self.hidden)
             self.bert_lstm_output = self.lstm_dropout(self.output)
             self.bert_lstm_att_feature = self.bert_lstm_output
-            print(f"Model LSTM layer elf.hidden: {self.hidden}")
-            print(f"Model LSTM layer self.output: {self.output.shape}")
-            print(f"Model LSTM layer self.bert_lstm_output: {self.bert_lstm_output.shape}")
+            # print(f"Model LSTM layer elf.hidden: {self.hidden}")
+            # print(f"Model LSTM layer self.output: {self.output.shape}")
+            # print(f"Model LSTM layer self.bert_lstm_output: {self.bert_lstm_output.shape}")
 
             # GCN layers
             
-            print(f"Model GCN layer adj: {adj.shape}")
-            print(f"Model GCN layer h: {h.shape}")
-            print(f"Model GCN layer self.bert_lstm_att_feature: {self.bert_lstm_att_feature.shape}")
+            # print(f"Model GCN layer adj: {adj.shape}")
+            # print(f"Model GCN layer h: {h.shape}")
+            # print(f"Model GCN layer self.bert_lstm_att_feature: {self.bert_lstm_att_feature.shape}")
             h_syn_ori, pool_mask_origin = self.Syn_gcn(adj, h)
             h_syn_gcn, pool_mask = self.Syn_gcn(adj, self.bert_lstm_att_feature)
             h_sem_ori, adj_sem_ori = self.Sem_gcn(h, encodings, seq_lens)
@@ -255,13 +255,13 @@ class D2E2SModel(DebertaV2PreTrainedModel):
 
     def _debug_forward(self, h, h_syn_gcn, h_sem_gcn, entity_clf, senti_clf, batch_loss):
         """Debug information during forward pass"""
-        print("\nDebug Information:")
-        print(f"DeBERTa output shape: {h.shape}")
-        print(f"Syntactic GCN output shape: {h_syn_gcn.shape}")
-        print(f"Semantic GCN output shape: {h_sem_gcn.shape}")
-        print(f"Entity classification output shape: {entity_clf.shape}")
-        print(f"Sentiment classification output shape: {senti_clf.shape}")
-        print(f"Batch loss: {batch_loss}")
+        # print("\nDebug Information:")
+        # print(f"DeBERTa output shape: {h.shape}")
+        # print(f"Syntactic GCN output shape: {h_syn_gcn.shape}")
+        # print(f"Semantic GCN output shape: {h_sem_gcn.shape}")
+        # print(f"Entity classification output shape: {entity_clf.shape}")
+        # print(f"Sentiment classification output shape: {senti_clf.shape}")
+        # print(f"Batch loss: {batch_loss}")
 
     def get_attention_weights(self, encodings, context_masks):
         """Get attention weights from DeBERTaV2"""
@@ -357,16 +357,16 @@ class D2E2SModel(DebertaV2PreTrainedModel):
 
     def _debug_eval(self, h, entity_clf, senti_clf):
         """Debug information for evaluation"""
-        print("\nEvaluation Debug Information:")
-        print(f"DeBERTa output shape: {h.shape}")
-        print(f"Entity classification probabilities:")
-        print(f"- Shape: {entity_clf.shape}")
-        print(f"- Max: {entity_clf.max().item():.4f}")
-        print(f"- Min: {entity_clf.min().item():.4f}")
-        print(f"Sentiment classification probabilities:")
-        print(f"- Shape: {senti_clf.shape}")
-        print(f"- Max: {senti_clf.max().item():.4f}")
-        print(f"- Min: {senti_clf.min().item():.4f}")
+        # print("\nEvaluation Debug Information:")
+        # print(f"DeBERTa output shape: {h.shape}")
+        # print(f"Entity classification probabilities:")
+        # print(f"- Shape: {entity_clf.shape}")
+        # print(f"- Max: {entity_clf.max().item():.4f}")
+        # print(f"- Min: {entity_clf.min().item():.4f}")
+        # print(f"Sentiment classification probabilities:")
+        # print(f"- Shape: {senti_clf.shape}")
+        # print(f"- Max: {senti_clf.max().item():.4f}")
+        # print(f"- Min: {senti_clf.min().item():.4f}")
 
     def get_evaluation_metrics(self, entity_clf, senti_clf):
         """Calculate evaluation metrics"""

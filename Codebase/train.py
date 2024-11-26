@@ -173,21 +173,21 @@ class D2E2S_Trainer(BaseTrainer):
                                               sentiments=batch['rels'], senti_masks=batch['senti_masks'], adj=batch['adj'])
                         # Print input shapes
             print("\nInput Shapes:")
-            print(f"Encodings shape: {batch['encodings'].shape}")
-            print(f"Context masks shape: {batch['context_masks'].shape}")
-            print(f"Entity masks shape: {batch['entity_masks'].shape}")
-            print(f"Entity sizes shape: {batch['entity_sizes'].shape}")
-            print(f"Sentiments shape: {batch['rels'].shape}")
-            print(f"Sentiment masks shape: {batch['senti_masks'].shape}")
-            print(f"Adjacency matrix shape: {batch['adj'].shape}")
+            # print(f"Encodings shape: {batch['encodings'].shape}")
+            # print(f"Context masks shape: {batch['context_masks'].shape}")
+            # print(f"Entity masks shape: {batch['entity_masks'].shape}")
+            # print(f"Entity sizes shape: {batch['entity_sizes'].shape}")
+            # print(f"Sentiments shape: {batch['rels'].shape}")
+            # print(f"Sentiment masks shape: {batch['senti_masks'].shape}")
+            # print(f"Adjacency matrix shape: {batch['adj'].shape}")
 
             # Print output values and shapes
-            print("\nOutput Values:")
-            print(f"Entity logits shape: {entity_logits.shape}")
-            print(f"Entity logits values:\n{entity_logits}")
-            print(f"\nSentiment logits shape: {senti_logits.shape}")
-            print(f"Sentiment logits values:\n{senti_logits}")
-            print(f"\nBatch loss: {batch_loss}")
+            # print("\nOutput Values:")
+            # print(f"Entity logits shape: {entity_logits.shape}")
+            # print(f"Entity logits values:\n{entity_logits}")
+            # print(f"\nSentiment logits shape: {senti_logits.shape}")
+            # print(f"Sentiment logits values:\n{senti_logits}")
+            # print(f"\nBatch loss: {batch_loss}")
 
             # Optional: Print statistics about the outputs
             print("\nStatistics:")
@@ -254,15 +254,15 @@ class D2E2S_Trainer(BaseTrainer):
                                evaluate=True, adj=batch['adj'])
                 entity_clf, senti_clf, rels = result
                                 # Print shapes and sample values
-                print("\nBatch Results:")
-                print(f"Entity Classifications Shape: {entity_clf.shape}")
-                print(f"Sentiment Classifications Shape: {senti_clf.shape}")
-                print(f"Relations Shape: {rels.shape}")
+                # print("\nBatch Results:")
+                # print(f"Entity Classifications Shape: {entity_clf.shape}")
+                # print(f"Sentiment Classifications Shape: {senti_clf.shape}")
+                # print(f"Relations Shape: {rels.shape}")
                 
-                print("\nSample Values:")
-                print(f"Entity Classifications (first item):\n{entity_clf[0]}")
-                print(f"Sentiment Classifications (first item):\n{senti_clf[0]}")
-                print(f"Relations (first item):\n{rels[0]}")
+                # print("\nSample Values:")
+                # print(f"Entity Classifications (first item):\n{entity_clf[0]}")
+                # print(f"Sentiment Classifications (first item):\n{senti_clf[0]}")
+                # print(f"Relations (first item):\n{rels[0]}")
                 # evaluate batch, entity:tensor(16, 188, 3), senti_clf:tensor(16, 2, 4), rels:tensor(16, 2, 2)
                 evaluator.eval_batch(entity_clf, senti_clf, rels, batch)
             global_iteration = epoch * updates_epoch + iteration
