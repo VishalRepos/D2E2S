@@ -118,13 +118,13 @@ class D2E2SModel(DebertaV2PreTrainedModel):
 
         if self.USE_CUDA:
             self.hidden = (
-                weight.new(self.layers * self.number, self.batch_size, self._hidden_dim).zero_().float().cuda(),
-                weight.new(self.layers * self.number, self.batch_size, self._hidden_dim).zero_().float().cuda()
+                weight.new(self.layers * self.number, self.batch_size, self._hidden_dim * 2).zero_().float().cuda(),
+                weight.new(self.layers * self.number, self.batch_size, self._hidden_dim * 2).zero_().float().cuda()
             )
         else:
             self.hidden = (
-                weight.new(self.layers * self.number, self.batch_size, self._hidden_dim).zero_().float(),
-                weight.new(self.layers * self.number, self.batch_size, self._hidden_dim).zero_().float()
+                weight.new(self.layers * self.number, self.batch_size, self._hidden_dim * 2).zero_().float(),
+                weight.new(self.layers * self.number, self.batch_size, self._hidden_dim * 2).zero_().float()
             )
         print(f"self.hidden self.layers: {self.layers}")
         print(f"self.hidden self.number: {self.number}")
