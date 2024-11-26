@@ -63,7 +63,7 @@ class D2E2SModel(DebertaV2PreTrainedModel):
         self.drop_rate = self.args.drop_out_rate
         self._is_bidirectional = self.args.is_bidirect
         self.layers = self.args.lstm_layers
-        self._hidden_dim = self.args.hidden_dim * 4
+        self._hidden_dim = self.args.hidden_dim
         self.mem_dim = self.args.mem_dim
         self._emb_dim = self.args.emb_dim
         self.output_size = self._emb_dim
