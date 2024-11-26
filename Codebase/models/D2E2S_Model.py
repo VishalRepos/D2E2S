@@ -197,9 +197,7 @@ class D2E2SModel(DebertaV2PreTrainedModel):
             # LSTM layer
             self.output, _ = self.lstm(h, self.hidden)
             self.bert_lstm_output = self.lstm_dropout(self.output)
-            # self.bert_lstm_att_feature = self.bert_lstm_output
-            self.bert_lstm_att_feature = self.bert_lstm_output  # after LSTM
-            h1 = self.attention_layer(h, h, self.context_masks[:, :seq_lens]) + h  # after attention
+            self.bert_lstm_att_feature = self.bert_lstm_output
             print(f"Model LSTM layer elf.hidden: {self.hidden}")
             print(f"Model LSTM layer self.output: {self.output.shape}")
             print(f"Model LSTM layer self.bert_lstm_output: {self.bert_lstm_output.shape}")
@@ -209,14 +207,10 @@ class D2E2SModel(DebertaV2PreTrainedModel):
             print(f"Model GCN layer adj: {adj.shape}")
             print(f"Model GCN layer h: {h.shape}")
             print(f"Model GCN layer self.bert_lstm_att_feature: {self.bert_lstm_att_feature.shape}")
-            # h_syn_ori, pool_mask_origin = self.Syn_gcn(adj, h)
-            # h_syn_gcn, pool_mask = self.Syn_gcn(adj, self.bert_lstm_att_feature)
-            # h_sem_ori, adj_sem_ori = self.Sem_gcn(h, encodings, seq_lens)
-            # h_sem_gcn, adj_sem_gcn = self.Sem_gcn(self.bert_lstm_att_feature, encodings, seq_lens)
             h_syn_ori, pool_mask_origin = self.Syn_gcn(adj, h)
-            h_syn_gcn, pool_mask = self.Syn_gcn(adj, h1)  # h1 is passed here
+            h_syn_gcn, pool_mask = self.Syn_gcn(adj, self.bert_lstm_att_feature)
             h_sem_ori, adj_sem_ori = self.Sem_gcn(h, encodings, seq_lens)
-            h_sem_gcn, adj_sem_gcn = self.Sem_gcn(h1, encodings, seq_lens)  # h1 is passed here
+            h_sem_gcn, adj_sem_gcn = self.Sem_gcn(self.bert_lstm_att_feature, encodings, seq_lens)
 
             # Fusion layer
             h1 = self.TIN(h, h_syn_ori, h_syn_gcn, h_sem_ori, h_sem_gcn, adj_sem_ori, adj_sem_gcn)
