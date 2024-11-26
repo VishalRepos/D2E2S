@@ -126,6 +126,10 @@ class D2E2SModel(DebertaV2PreTrainedModel):
                 weight.new(self.layers * self.number, self.batch_size, self._hidden_dim).zero_().float(),
                 weight.new(self.layers * self.number, self.batch_size, self._hidden_dim).zero_().float()
             )
+        print(f"self.hidden self.layers: {self.layers}")
+        print(f"self.hidden self.number: {self.number}")
+        print(f"self.hidden self.batch_size: {self.batch_size}")
+        print(f"self.hidden self._hidden_dim: {self._hidden_dim}")
 
         # 6、weight initialization
         self.init_weights()  # Make sure this is compatible with DeBERTa
