@@ -78,7 +78,7 @@ def train_argparser():
         "--debert_feature_dim",
         type=int,
         default=768,
-        help="dimension of pretrained bert feature",
+        help="dimension of pretrained debert feature",
     )
     parser.add_argument(
         "--seed", default=42, type=int, help="Random seed for initialization"
