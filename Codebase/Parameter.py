@@ -183,9 +183,7 @@ def train_argparser():
         default=1,
         help="Log training process every x iterations",
     )
-    parser.add_argument(
-        "--pretrained_debert_name", default="debert-base-uncased", type=str
-    )
+    parser.add_argument("--pretrained_debert_name", default="deberta-v3-base", type=str)
     parser.add_argument(
         "--weight_decay", type=float, default=0.01, help="Weight decay to apply"
     )
