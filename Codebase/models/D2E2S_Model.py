@@ -13,7 +13,7 @@ import numpy as np
 from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
 from models.Channel_Fusion import Orthographic_projection_fusion, TextCentredSP
-
+from transformers import PreTrainedModel
 
 USE_CUDA = torch.cuda.is_available()
 
@@ -31,7 +31,7 @@ def get_token(h: torch.tensor, x: torch.tensor, token: int):
     return token_h
 
 
-class D2E2SModel(nn.Module):
+class D2E2SModel(PreTrainedModel):
     VERSION = "1.1"
 
     def __init__(
