@@ -20,8 +20,8 @@ def download_file(url, filename):
             progress_bar.update(size)
 
 
-def download_bert_model(
-    model_name="bert-base-uncased", save_path="./deberta-base-uncased"
+def download_deberta_model(
+    model_name="microsoft/deberta-v3-base", save_path="./deberta-v3-base"
 ):
     base_url = f"https://huggingface.co/{model_name}/resolve/main/"
     files_to_download = [
@@ -29,7 +29,8 @@ def download_bert_model(
         "pytorch_model.bin",
         "tokenizer.json",
         "tokenizer_config.json",
-        "vocab.txt",
+        "vocab.json",
+        "merges.txt",
     ]
 
     os.makedirs(save_path, exist_ok=True)
@@ -40,8 +41,8 @@ def download_bert_model(
         print(f"Downloading {file}...")
         download_file(url, filepath)
 
-    print(f"BERT model '{model_name}' has been downloaded to {save_path}")
+    print(f"DeBERTa model '{model_name}' has been downloaded to {save_path}")
 
 
 if __name__ == "__main__":
-    download_bert_model()
+    download_deberta_model()
