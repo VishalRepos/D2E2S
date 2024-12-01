@@ -10,7 +10,7 @@ from torch.optim import optimizer
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import AdamW, DebertaConfig
-from transformers import DebertaV3Tokenizer
+from transformers import AutoTokenizer
 
 from Parameter import train_argparser
 from models.D2E2S_Model import D2E2SModel
@@ -29,8 +29,7 @@ warnings.filterwarnings("ignore")
 class D2E2S_Trainer(BaseTrainer):
     def __init__(self, args: argparse.Namespace):
         super().__init__(args)
-
-        self._tokenizer = DebertaV3Tokenizer.from_pretrained("./deberta-v3-base")
+        self._tokenizer = AutoTokenizer.from_pretrained("./deberta-v3-base")
         self._predictions_path = os.path.join(
             self._log_path_predict, "predicted_%s_epoch_%s.json"
         )
@@ -86,9 +85,8 @@ class D2E2S_Trainer(BaseTrainer):
         test_dataset = input_reader.get_dataset(test_label)
 
         # load model
-        config = DebertaConfig.from_pretrained(
-            self.args.pretrained_debert_name, from_tf=True
-        )
+        config = config = DebertaConfig.from_pretrained("microsoft/deberta-v3-base")
+
         model = D2E2SModel.from_pretrained(
             self.args.pretrained_debert_name,
             config=config,
