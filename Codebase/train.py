@@ -10,7 +10,7 @@ from torch.optim import optimizer
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import AdamW, DebertaConfig
-from transformers import DebertaTokenizer
+from transformers import DebertaV2Tokenizer
 
 from Parameter import train_argparser
 from models.D2E2S_Model import D2E2SModel
@@ -30,7 +30,7 @@ class D2E2S_Trainer(BaseTrainer):
     def __init__(self, args: argparse.Namespace):
         super().__init__(args)
 
-        self._tokenizer = DebertaTokenizer.from_pretrained(
+        self._tokenizer = DebertaV2Tokenizer.from_pretrained(
             "./deberta-v3-base", do_lower_case=args.lowercase
         )
         self._predictions_path = os.path.join(
