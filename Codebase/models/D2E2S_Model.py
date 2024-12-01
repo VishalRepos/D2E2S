@@ -1,4 +1,3 @@
-from transformers import DebertaModel, DebertaForSequenceClassification, DebertaConfig
 from torch import nn as nn
 import torch
 from trainer import util, sampling
@@ -14,6 +13,7 @@ from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
 from models.Channel_Fusion import Orthographic_projection_fusion, TextCentredSP
 from transformers import PreTrainedModel
+from transformers import AutoConfig, AutoModel
 
 USE_CUDA = torch.cuda.is_available()
 
@@ -36,7 +36,7 @@ class D2E2SModel(PreTrainedModel):
 
     def __init__(
         self,
-        config: DebertaConfig,
+        config: AutoConfig,
         cls_token: int,
         sentiment_types: int,
         entity_types: int,
@@ -44,6 +44,7 @@ class D2E2SModel(PreTrainedModel):
     ):
         super(D2E2SModel, self).__init__(config)
         # 1、parameters init
+        print("==========came====================")
         self.args = args
         self._size_embedding = self.args.size_embedding
         self._prop_drop = self.args.prop_drop
@@ -63,7 +64,9 @@ class D2E2SModel(PreTrainedModel):
         self.gcn_dropout = self.args.gcn_dropout
 
         # 2、DEBERT model
-        self.deberta = DebertaModel(config)
+        self.deberta = AutoModel.from_pretrained(
+            "microsoft/deberta-v3-base", config=config
+        )
 
         # self.BertAdapterModel = BertAdapterModel(config)
         self.Syn_gcn = GCN()

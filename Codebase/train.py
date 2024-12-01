@@ -9,8 +9,8 @@ import transformers
 from torch.optim import optimizer
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-from transformers import AdamW, DebertaConfig
-from transformers import AutoTokenizer
+from transformers import AdamW
+from transformers import AutoTokenizer, AutoConfig
 
 from Parameter import train_argparser
 from models.D2E2S_Model import D2E2SModel
@@ -85,7 +85,7 @@ class D2E2S_Trainer(BaseTrainer):
         test_dataset = input_reader.get_dataset(test_label)
 
         # load model
-        config = config = DebertaConfig.from_pretrained("microsoft/deberta-v3-base")
+        config = AutoConfig.from_pretrained("microsoft/deberta-v3-base")
 
         model = D2E2SModel.from_pretrained(
             self.args.pretrained_debert_name,
