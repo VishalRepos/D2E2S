@@ -31,7 +31,7 @@ class D2E2S_Trainer(BaseTrainer):
         super().__init__(args)
 
         self._tokenizer = DebertaTokenizer.from_pretrained(
-            "./deberta-base-uncased", do_lower_case=args.lowercase
+            "./deberta-v3-base", do_lower_case=args.lowercase
         )
         self._predictions_path = os.path.join(
             self._log_path_predict, "predicted_%s_epoch_%s.json"
