@@ -42,7 +42,7 @@ class D2E2S_Trainer(BaseTrainer):
         
         # Setup tokenizer
         print("\nSetting up tokenizer...")
-        self._tokenizer = AutoTokenizer.from_pretrained("microsoft/deberta-v2-xlarge")
+        self._tokenizer = AutoTokenizer.from_pretrained("microsoft/deberta-base")
         print(f"Tokenizer vocabulary size: {len(self._tokenizer)}")
         
         # Setup paths
@@ -104,7 +104,7 @@ class D2E2S_Trainer(BaseTrainer):
         test_dataset = input_reader.get_dataset(test_label)
 
         # load model
-        config = DebertaV2Config.from_pretrained("microsoft/deberta-v2-xlarge")
+        config = DebertaV2Config.from_pretrained("microsoft/deberta-base")
         print(f"Trainer -> config: {config}")
         print(f"Trainer -> config: {config.hidden_size}")
         # Initialize model with correct argument order

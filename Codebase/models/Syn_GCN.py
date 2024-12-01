@@ -2,7 +2,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 class GCN(nn.Module):
 
-    def __init__(self, emb_dim=1536, num_layers=2,gcn_dropout=0.1):
+    def __init__(self, emb_dim=768, num_layers=2,gcn_dropout=0.1):
         super(GCN, self).__init__()
         self.layers = num_layers
         self.emb_dim = emb_dim

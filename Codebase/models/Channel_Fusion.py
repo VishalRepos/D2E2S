@@ -5,10 +5,10 @@ import torch.nn.functional as F
 
 def Orthographic_projection_fusion(feature1, feature2, feature3):
     # Dimensionality reduction is performed on each feature to obtain a low-dimensional feature vector
-    pca = PCA(n_components=1536)
-    feature1_vector = pca.fit_transform(feature1.view(-1, 1536)).reshape(4, 24, -1)
-    feature2_vector = pca.fit_transform(feature2.view(-1, 1536)).reshape(4, 24, -1)
-    feature3_vector = pca.fit_transform(feature3.view(-1, 1536)).reshape(4, 24, -1)
+    pca = PCA(n_components=768)
+    feature1_vector = pca.fit_transform(feature1.view(-1, 768)).reshape(4, 24, -1)
+    feature2_vector = pca.fit_transform(feature2.view(-1, 768)).reshape(4, 24, -1)
+    feature3_vector = pca.fit_transform(feature3.view(-1, 768)).reshape(4, 24, -1)
 
     # The vectors of all features are combined to obtain a combined feature vector
     fused_feature_vector = torch.cat([feature1_vector, feature2_vector, feature3_vector], dim=-1)
