@@ -58,7 +58,7 @@ class D2E2SModel(PreTrainedModel):
         self.batch_size = self.args.batch_size
         self.USE_CUDA = USE_CUDA
         self.max_pairs = 100
-        self.debert_feature_dim = self.args.debert_feature_dim
+        self.deberta_feature_dim = self.args.deberta_feature_dim
         self.gcn_dim = self.args.gcn_dim
         self.gcn_dropout = self.args.gcn_dropout
 
