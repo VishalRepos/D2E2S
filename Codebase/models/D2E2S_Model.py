@@ -183,10 +183,10 @@ class D2E2SModel(PreTrainedModel):
 
         # gcn layer
         h_syn_ori, pool_mask_origin = self.Syn_gcn(adj, h)
-        h_syn_gcn, pool_mask = self.Syn_gcn(adj, self.bert_lstm_att_feature)
+        h_syn_gcn, pool_mask = self.Syn_gcn(adj, self.deberta_lstm_att_feature)
         h_sem_ori, adj_sem_ori = self.Sem_gcn(h, encodings, seq_lens)
         h_sem_gcn, adj_sem_gcn = self.Sem_gcn(
-            self.bert_lstm_att_feature, encodings, seq_lens
+            self.deberta_lstm_att_feature, encodings, seq_lens
         )
 
         # fusion layer
@@ -240,10 +240,10 @@ class D2E2SModel(PreTrainedModel):
 
         # encoder layer
         # h = self.BertAdapterModel(input_ids=encodings, attention_mask=self.context_masks)[0]
-        h = self.bert(input_ids=encodings, attention_mask=self.context_masks)[0]
+        h = self.deberta(input_ids=encodings, attention_mask=self.context_masks)[0]
         self.output, _ = self.lstm(h, self.hidden)
-        self.bert_lstm_output = self.lstm_dropout(self.output)
-        self.bert_lstm_att_feature = self.bert_lstm_output
+        self.deberta_lstm_output = self.lstm_dropout(self.output)
+        self.deberta_lstm_att_feature = self.deberta_lstm_output
 
         # attention layers
         # bert_lstm_feature_attention = self.attention_layer(self.bert_lstm_output, self.bert_lstm_output, self.context_masks[:,:seq_lens])
@@ -252,10 +252,10 @@ class D2E2SModel(PreTrainedModel):
 
         # gcn layer
         h_syn_ori, pool_mask_origin = self.Syn_gcn(adj, h)
-        h_syn_gcn, pool_mask = self.Syn_gcn(adj, self.bert_lstm_att_feature)
+        h_syn_gcn, pool_mask = self.Syn_gcn(adj, self.deberta_lstm_att_feature)
         h_sem_ori, adj_sem_ori = self.Sem_gcn(h, encodings, seq_lens)
         h_sem_gcn, adj_sem_gcn = self.Sem_gcn(
-            self.bert_lstm_att_feature, encodings, seq_lens
+            self.deberta_lstm_att_feature, encodings, seq_lens
         )
 
         # fusion layer
