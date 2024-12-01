@@ -75,10 +75,10 @@ def train_argparser():
     parser.add_argument("--pooling", default="avg", type=str, help="[max, avg, sum]")
     parser.add_argument("--gcn_dim", type=int, default=300, help="dimension of gcn")
     parser.add_argument(
-        "--debert_feature_dim",
+        "--deberta_feature_dim",
         type=int,
         default=768,
-        help="dimension of pretrained debert feature",
+        help="dimension of pretrained deberta feature",
     )
     parser.add_argument(
         "--seed", default=42, type=int, help="Random seed for initialization"
@@ -184,7 +184,7 @@ def train_argparser():
         help="Log training process every x iterations",
     )
     parser.add_argument(
-        "--pretrained_debert_name", default="microsoft/deberta-v3-base", type=str
+        "--pretrained_deberta_name", default="microsoft/deberta-v3-base", type=str
     )
     parser.add_argument(
         "--weight_decay", type=float, default=0.01, help="Weight decay to apply"

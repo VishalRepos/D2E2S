@@ -88,7 +88,7 @@ class D2E2S_Trainer(BaseTrainer):
         config = AutoConfig.from_pretrained("microsoft/deberta-v3-base")
 
         model = D2E2SModel.from_pretrained(
-            self.args.pretrained_debert_name,
+            self.args.pretrained_deberta_name,
             config=config,
             cls_token=self._tokenizer.convert_tokens_to_ids("[CLS]"),
             sentiment_types=input_reader.sentiment_type_count - 1,

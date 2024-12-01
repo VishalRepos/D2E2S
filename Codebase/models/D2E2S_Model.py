@@ -44,7 +44,6 @@ class D2E2SModel(PreTrainedModel):
     ):
         super(D2E2SModel, self).__init__(config)
         # 1、parameters init
-        print("==========came====================")
         self.args = args
         self._size_embedding = self.args.size_embedding
         self._prop_drop = self.args.prop_drop
@@ -140,7 +139,7 @@ class D2E2SModel(PreTrainedModel):
             print("Freeze transformer weights")
 
             # freeze all transformer weights
-            for param in self.bert.parameters():
+            for param in self.deberta.parameters():
                 param.requires_grad = False
 
         # # 7、Mutual Biaffine Model
@@ -151,7 +150,7 @@ class D2E2SModel(PreTrainedModel):
         # self.Biaffine_ATT = BiaffineAttention(self.bert_feature_dim, self.bert_feature_dim)
 
         # 7、feature merge model
-        self.TIN = TIN(self.debert_feature_dim)
+        self.TIN = TIN(self.deberta_feature_dim)
         # self.TextCentredSP = TextCentredSP(self.bert_feature_dim*2, self.shared_dim, self.private_dim)
 
     def _forward_train(
@@ -173,10 +172,10 @@ class D2E2SModel(PreTrainedModel):
 
         # encoder layer
         # h = self.BertAdapterModel(input_ids=encodings, attention_mask=self.context_masks)[0]
-        h = self.bert(input_ids=encodings, attention_mask=self.context_masks)[0]
+        h = self.deberta(input_ids=encodings, attention_mask=self.context_masks)[0]
         self.output, _ = self.lstm(h, self.hidden)
-        self.bert_lstm_output = self.lstm_dropout(self.output)
-        self.bert_lstm_att_feature = self.bert_lstm_output
+        self.deberta_lstm_output = self.lstm_dropout(self.output)
+        self.deberta_lstm_att_feature = self.deberta_lstm_output
 
         # attention layers
         # bert_lstm_feature_attention = self.attention_layer(self.bert_lstm_output, self.bert_lstm_output, self.context_masks[:,:seq_lens])
