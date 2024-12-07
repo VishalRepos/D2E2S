@@ -68,8 +68,8 @@ class D2E2SModel(PreTrainedModel):
         )
 
         # self.BertAdapterModel = BertAdapterModel(config)
-        self.Syn_gcn = GCN()
-        self.Sem_gcn = SemGCN(self.args)
+        self.Syn_gcn = GCN(self._emb_dim)
+        self.Sem_gcn = SemGCN(self.args, self._emb_dim)
         self.senti_classifier = nn.Linear(
             config.hidden_size * 3 + self._size_embedding * 2, sentiment_types
         )
