@@ -174,8 +174,6 @@ class D2E2SModel(PreTrainedModel):
         # h = self.BertAdapterModel(input_ids=encodings, attention_mask=self.context_masks)[0]
         h = self.deberta(input_ids=encodings, attention_mask=self.context_masks)[0]
         self.output, _ = self.lstm(h, self.hidden)
-        print(f"self.args.hidden_dim->{self.args.hidden_dim}")
-        print(f"self.output->{self.output.shape}")
         self.deberta_lstm_output = self.lstm_dropout(self.output)
         self.deberta_lstm_att_feature = self.deberta_lstm_output
 
@@ -184,8 +182,6 @@ class D2E2SModel(PreTrainedModel):
         # self.bert_lstm_att_feature = self.bert_lstm_output + bert_lstm_feature_attention
 
         # gcn layer
-        print(f"h->{h.shape}")
-        print(f"self.deberta_lstm_att_feature->{self.deberta_lstm_att_feature.shape}")
         h_syn_ori, pool_mask_origin = self.Syn_gcn(adj, h)
         h_syn_gcn, pool_mask = self.Syn_gcn(adj, self.deberta_lstm_att_feature)
         h_sem_ori, adj_sem_ori = self.Sem_gcn(h, encodings, seq_lens)
