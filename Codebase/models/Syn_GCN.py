@@ -1,8 +1,10 @@
 import torch.nn as nn
 import torch.nn.functional as F
+
+
 class GCN(nn.Module):
 
-    def __init__(self, emb_dim=768, num_layers=2,gcn_dropout=0.1):
+    def __init__(self, emb_dim=1024, num_layers=2, gcn_dropout=0.1):
         super(GCN, self).__init__()
         self.layers = num_layers
         self.emb_dim = emb_dim
@@ -13,7 +15,6 @@ class GCN(nn.Module):
             input_dim = self.emb_dim if layer == 0 else self.out_dim
             self.W.append(nn.Linear(input_dim, input_dim))
         self.gcn_drop = nn.Dropout(gcn_dropout)
-
 
     def forward(self, adj, inputs):
         # gcn layer
@@ -29,4 +30,4 @@ class GCN(nn.Module):
             gAxW = F.relu(AxW)
             inputs = self.gcn_drop(gAxW) if l < self.layers - 1 else gAxW
 
-        return inputs,mask
+        return inputs, mask
