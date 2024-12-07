@@ -182,8 +182,8 @@ class D2E2SModel(PreTrainedModel):
         # self.bert_lstm_att_feature = self.bert_lstm_output + bert_lstm_feature_attention
 
         # gcn layer
-        print(f"h->{h}")
-        print(f"self.deberta_lstm_att_feature->{self.deberta_lstm_att_feature}")
+        print(f"h->{h.shape}")
+        print(f"self.deberta_lstm_att_feature->{self.deberta_lstm_att_feature.shape}")
         h_syn_ori, pool_mask_origin = self.Syn_gcn(adj, h)
         h_syn_gcn, pool_mask = self.Syn_gcn(adj, self.deberta_lstm_att_feature)
         h_sem_ori, adj_sem_ori = self.Sem_gcn(h, encodings, seq_lens)
