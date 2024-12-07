@@ -77,7 +77,7 @@ def train_argparser():
     parser.add_argument(
         "--deberta_feature_dim",
         type=int,
-        default=768,
+        default=1024,
         help="dimension of pretrained deberta feature",
     )
     parser.add_argument(
