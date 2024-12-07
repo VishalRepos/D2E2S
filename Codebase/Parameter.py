@@ -40,6 +40,7 @@ def train_argparser():
     parser.add_argument(
         "--use_gated", default=False, help="Do use gcnconv and gatedgraphconv."
     )
+    ## have to set value as half of `emb_dim` when we biderection lstm we used
     parser.add_argument(
         "--hidden_dim", type=int, default=512, help="hidden layer dimension."
     )
