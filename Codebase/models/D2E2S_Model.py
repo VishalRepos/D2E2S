@@ -174,6 +174,7 @@ class D2E2SModel(PreTrainedModel):
         # h = self.BertAdapterModel(input_ids=encodings, attention_mask=self.context_masks)[0]
         h = self.deberta(input_ids=encodings, attention_mask=self.context_masks)[0]
         self.output, _ = self.lstm(h, self.hidden)
+        print(f"self.args.hidden_dim->{self.args.hidden_dim}")
         print(f"self.output->{self.output.shape}")
         self.deberta_lstm_output = self.lstm_dropout(self.output)
         self.deberta_lstm_att_feature = self.deberta_lstm_output

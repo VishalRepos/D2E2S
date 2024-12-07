@@ -41,7 +41,7 @@ def train_argparser():
         "--use_gated", default=False, help="Do use gcnconv and gatedgraphconv."
     )
     parser.add_argument(
-        "--hidden_dim", type=int, default=768, help="hidden layer dimension."
+        "--hidden_dim", type=int, default=1024, help="hidden layer dimension."
     )
     parser.add_argument(
         "--emb_dim", type=int, default=1024, help="Word embedding dimension."
