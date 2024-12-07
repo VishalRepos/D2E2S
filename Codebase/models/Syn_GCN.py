@@ -29,5 +29,5 @@ class GCN(nn.Module):
             AxW = AxW / denom
             gAxW = F.relu(AxW)
             inputs = self.gcn_drop(gAxW) if l < self.layers - 1 else gAxW
-        print("gcn->done")
+        print("syc_gcn->done")
         return inputs, mask
