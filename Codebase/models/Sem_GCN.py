@@ -59,7 +59,6 @@ class SemGCN(nn.Module):
             AxW = AxW / denom_ag
             gAxW = F.relu(AxW)
             outputs = self.gcn_drop(gAxW) if l < self.layers - 1 else gAxW
-        print("semgcn->done")
         return outputs, adj_ag_new
 
 
