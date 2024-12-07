@@ -44,7 +44,7 @@ def train_argparser():
         "--hidden_dim", type=int, default=384, help="hidden layer dimension."
     )
     parser.add_argument(
-        "--emb_dim", type=int, default=768, help="Word embedding dimension."
+        "--emb_dim", type=int, default=1024, help="Word embedding dimension."
     )
     parser.add_argument(
         "--lstm_layers", type=int, default=2, help="Number of LSTM layers."
