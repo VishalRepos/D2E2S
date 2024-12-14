@@ -165,11 +165,11 @@ def train_argparser():
         "--batch_size", type=int, default=16, help="Training batch size"
     )
     parser.add_argument("--epochs", type=int, default=120, help="Number of epochs")
-    parser.add_argument("--lr", type=float, default=5e-5, help="Learning rate")
+    parser.add_argument("--lr", type=float, default=5e-6, help="Learning rate")
     parser.add_argument(
         "--lr_warmup",
         type=float,
-        default=0.1,
+        default=0.2,
         help="Proportion of total train iterations to warmup in linear increase/decrease schedule",
     )
     parser.add_argument(
