@@ -42,10 +42,10 @@ def train_argparser():
     )
     ## have to set value as half of `emb_dim` when we biderection lstm we used
     parser.add_argument(
-        "--hidden_dim", type=int, default=512, help="hidden layer dimension."
+        "--hidden_dim", type=int, default=768, help="hidden layer dimension."
     )
     parser.add_argument(
-        "--emb_dim", type=int, default=1024, help="Word embedding dimension."
+        "--emb_dim", type=int, default=1536, help="Word embedding dimension."
     )
     parser.add_argument(
         "--lstm_layers", type=int, default=2, help="Number of LSTM layers."
@@ -78,7 +78,7 @@ def train_argparser():
     parser.add_argument(
         "--deberta_feature_dim",
         type=int,
-        default=1024,
+        default=1536,
         help="dimension of pretrained deberta feature",
     )
     parser.add_argument(
@@ -185,7 +185,7 @@ def train_argparser():
         help="Log training process every x iterations",
     )
     parser.add_argument(
-        "--pretrained_deberta_name", default="microsoft/deberta-v3-large", type=str
+        "--pretrained_deberta_name", default="microsoft/deberta-v2-xxlarge", type=str
     )
     parser.add_argument(
         "--weight_decay", type=float, default=0.01, help="Weight decay to apply"
