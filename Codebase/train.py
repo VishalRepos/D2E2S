@@ -29,17 +29,15 @@ warnings.filterwarnings("ignore")
 
 def create_hyperparameter_space(trial, args):
     """Define the hyperparameter search space for Optuna."""
-    batch_sizes = [int(x) for x in args.batch_size_options.split(',')]
-    
     return {
-        'learning_rate': trial.suggest_float('learning_rate', args.lr_min, args.lr_max, log=True),
-        'weight_decay': trial.suggest_float('weight_decay', args.weight_decay_min, args.weight_decay_max, log=True),
-        'batch_size': trial.suggest_categorical('batch_size', batch_sizes),
-        'max_span_size': trial.suggest_int('max_span_size', args.max_span_size_min, args.max_span_size_max),
-        'neg_entity_count': trial.suggest_int('neg_entity_count', args.neg_entity_count_min, args.neg_entity_count_max),
-        'neg_triple_count': trial.suggest_int('neg_triple_count', args.neg_triple_count_min, args.neg_triple_count_max),
-        'lr_warmup': trial.suggest_float('lr_warmup', args.lr_warmup_min, args.lr_warmup_max),
-        'max_grad_norm': trial.suggest_float('max_grad_norm', args.max_grad_norm_min, args.max_grad_norm_max),
+        'learning_rate': trial.suggest_float('learning_rate', 1e-5, 1e-3, log=True),
+        'weight_decay': trial.suggest_float('weight_decay', 1e-5, 1e-2, log=True),
+        'batch_size': trial.suggest_categorical('batch_size', [8, 16, 32, 64]),
+        'max_span_size': trial.suggest_int('max_span_size', 4, 8),
+        'neg_entity_count': trial.suggest_int('neg_entity_count', 50, 150),
+        'neg_triple_count': trial.suggest_int('neg_triple_count', 50, 150),
+        'lr_warmup': trial.suggest_float('lr_warmup', 0.0, 0.2),
+        'max_grad_norm': trial.suggest_float('max_grad_norm', 0.5, 2.0),
     }
 
 class D2E2S_Trainer(BaseTrainer):
