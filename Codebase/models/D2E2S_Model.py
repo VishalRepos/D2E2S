@@ -465,21 +465,37 @@ class D2E2SModel(PreTrainedModel):
 
     def forward(self, input_ids=None, attention_mask=None, entity_masks=None, entity_sizes=None, 
             sentiments=None, senti_masks=None, adj=None, entity_spans=None, 
-            entity_sample_masks=None, evaluate=False):
+            entity_sample_masks=None, evaluate=False, output_attentions=False):
 
-        # First, get the DeBERTa output
-        deberta_output = self.deberta(input_ids=input_ids, attention_mask=attention_mask)[0]
+        # First, get the DeBERTa output with attention weights
+        deberta_outputs = self.deberta(
+            input_ids=input_ids, 
+            attention_mask=attention_mask,
+            output_attentions=output_attentions
+        )
+        
+        deberta_output = deberta_outputs[0]
+        attention_weights = deberta_outputs.attentions if output_attentions else None
     
         # Project the output if needed
         deberta_output = self.deberta_projection(deberta_output)
 
         # Then, pass this output along with other arguments to your custom methods
         if not evaluate:
-            return self._forward_train(deberta_output, attention_mask, entity_masks, entity_sizes, 
-                                    sentiments, senti_masks, adj)
+            outputs = self._forward_train(deberta_output, attention_mask, entity_masks, entity_sizes,
+                                      sentiments, senti_masks, adj)
         else:
-            return self._forward_eval(deberta_output, attention_mask, entity_masks, entity_sizes, 
-                                    entity_spans, entity_sample_masks, adj)
+            outputs = self._forward_eval(deberta_output, attention_mask, entity_masks, entity_sizes,
+                                     entity_spans, entity_sample_masks, adj)
+        
+        # Add attention weights to outputs if requested
+        if output_attentions:
+            if isinstance(outputs, tuple):
+                outputs = outputs + (attention_weights,)
+            else:
+                outputs = (outputs, attention_weights)
+
+        return outputs
 
 
 def compute_loss(p, q, k):
