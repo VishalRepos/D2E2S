@@ -28,6 +28,7 @@ warnings.filterwarnings("ignore")
 
 class D2E2S_Trainer(BaseTrainer):
     def __init__(self, args: argparse.Namespace):
+        # Existing initialization
         super().__init__(args)
         self._tokenizer = AutoTokenizer.from_pretrained("microsoft/deberta-v3-base")
         self._predictions_path = os.path.join(
@@ -38,11 +39,16 @@ class D2E2S_Trainer(BaseTrainer):
         )
         os.makedirs(self._log_path_result)
         os.makedirs(self._log_path_predict)
+        
+        # Add visualization paths
+        self._attention_viz_path = os.path.join(self._log_path, "attention_viz")
+        os.makedirs(self._attention_viz_path, exist_ok=True)
+        
         self.max_pair_f1 = 40
         self.result_path = os.path.join(
             self._log_path_result, "result{}.txt".format(self.args.max_span_size)
         )
-
+        
     def _preprocess(self, args, input_reader_cls, types_path, train_path, test_path):
 
         train_label, test_label = "train", "test"
@@ -147,8 +153,7 @@ class D2E2S_Trainer(BaseTrainer):
         updates_epoch: int,
         epoch: int,
     ):
-
-        # create data loader
+        # Create data loader
         dataset.switch_mode(Dataset.TRAIN_MODE)
         data_loader = DataLoader(
             dataset,
@@ -163,11 +168,16 @@ class D2E2S_Trainer(BaseTrainer):
 
         iteration = 0
         total = dataset.sentence_count // self.args.batch_size
-        for batch in tqdm(data_loader, total=total, desc="Train epoch %s" % epoch):
+        for batch_idx, batch in enumerate(tqdm(data_loader, total=total, desc=f"Train epoch {epoch}")):
             model.train()
-            batch = util.to_device(batch, arg_parser.device)
+            batch = util.to_device(batch, self.args.device)
 
-            # forward step
+            # Enable attention visualization periodically (every 50 batches)
+            visualize_attention = batch_idx % 50 == 0
+            if visualize_attention:
+                model.store_attention_weights(True)
+
+            # Forward step
             entity_logits, senti_logits, batch_loss = model(
                 encodings=batch["encodings"],
                 context_masks=batch["context_masks"],
@@ -178,7 +188,26 @@ class D2E2S_Trainer(BaseTrainer):
                 adj=batch["adj"],
             )
 
-            # compute loss and optimize parameters
+            # Visualize attention if enabled
+            if visualize_attention:
+                tokens = self._tokenizer.convert_ids_to_tokens(
+                    batch["encodings"][0].cpu().numpy()
+                )
+                if hasattr(model, "attention_weights"):
+                    # Generate visualizations
+                    model.visualizer.visualize_model_attention(
+                        model.attention_weights.get('deberta'),
+                        model.attention_weights.get('gcn_sem'),
+                        model.attention_weights.get('gcn_syn'),
+                        tokens,
+                        save_prefix=os.path.join(
+                            self._attention_viz_path,
+                            f"train_epoch{epoch}_batch{batch_idx}"
+                        )
+                    )
+                model.store_attention_weights(False)
+
+            # Compute loss and optimize parameters
             epoch_loss = compute_loss.compute(
                 entity_logits=entity_logits,
                 senti_logits=senti_logits,
@@ -189,7 +218,7 @@ class D2E2S_Trainer(BaseTrainer):
                 senti_sample_masks=batch["senti_sample_masks"],
             )
 
-            # logging
+            # Logging
             iteration += 1
             global_iteration = epoch * updates_epoch + iteration
 
@@ -239,8 +268,7 @@ class D2E2S_Trainer(BaseTrainer):
         updates_epoch: int = 0,
         iteration: int = 0,
     ):
-
-        # create evaluator
+        # Create evaluator
         evaluator = Evaluator(
             dataset,
             input_reader,
@@ -252,7 +280,8 @@ class D2E2S_Trainer(BaseTrainer):
             epoch,
             dataset.label,
         )
-        # create data loader
+
+        # Create data loader
         dataset.switch_mode(Dataset.EVAL_MODE)
         data_loader = DataLoader(
             dataset,
@@ -265,15 +294,18 @@ class D2E2S_Trainer(BaseTrainer):
 
         with torch.no_grad():
             model.eval()
-            # iterate batches
+            # Enable attention weight storage
+            model.store_attention_weights(True)
+            
+            # Iterate batches
             total = math.ceil(dataset.sentence_count / self.args.batch_size)
-            for batch in tqdm(
-                data_loader, total=total, desc="Evaluate epoch %s" % epoch
-            ):
-                # move batch to selected device
+            for batch_idx, batch in enumerate(tqdm(
+                data_loader, total=total, desc=f"Evaluate epoch {epoch}"
+            )):
+                # Move batch to selected device
                 batch = util.to_device(batch, self.args.device)
 
-                # run model (forward pass)
+                # Run model (forward pass)
                 result = model(
                     encodings=batch["encodings"],
                     context_masks=batch["context_masks"],
@@ -285,12 +317,35 @@ class D2E2S_Trainer(BaseTrainer):
                     adj=batch["adj"],
                 )
                 entity_clf, senti_clf, rels = result
-                # evaluate batch, entity:tensor(16, 188, 3), senti_clf:tensor(16, 2, 4), rels:tensor(16, 2, 2)
+
+                # Visualize attention weights periodically
+                if batch_idx % 20 == 0:  # Visualize every 20 batches
+                    tokens = self._tokenizer.convert_ids_to_tokens(
+                        batch["encodings"][0].cpu().numpy()
+                    )
+                    if hasattr(model, "attention_weights"):
+                        # Generate visualizations
+                        model.visualizer.visualize_model_attention(
+                            model.attention_weights.get('deberta'),
+                            model.attention_weights.get('gcn_sem'),
+                            model.attention_weights.get('gcn_syn'),
+                            tokens,
+                            save_prefix=os.path.join(
+                                self._attention_viz_path,
+                                f"epoch{epoch}_batch{batch_idx}"
+                            )
+                        )
+
+                # Evaluate batch
                 evaluator.eval_batch(entity_clf, senti_clf, rels, batch)
+
+            # Disable attention weight storage
+            model.store_attention_weights(False)
+            
             global_iteration = epoch * updates_epoch + iteration
             ner_eval, senti_eval, senti_nec_eval = evaluator.compute_scores()
-            # print(self.result_path)
             self._log_filter_file(ner_eval, senti_eval, evaluator, epoch)
+
         self._log_eval(
             *ner_eval,
             *senti_eval,

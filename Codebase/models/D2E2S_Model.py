@@ -153,6 +153,18 @@ class D2E2SModel(PreTrainedModel):
         self.TIN = TIN(self.deberta_feature_dim)
         # self.TextCentredSP = TextCentredSP(self.bert_feature_dim*2, self.shared_dim, self.private_dim)
 
+        # Add visualization support
+        from models.viz_utils import AttentionVisualizer
+
+        self.visualizer = AttentionVisualizer()
+        self.store_attention = False
+        self.attention_weights = {}
+
+    def store_attention_weights(self, should_store=True):
+        """Enable or disable storing attention weights during forward pass."""
+        self.store_attention = should_store
+        self.attention_weights = {}
+
     def _forward_train(
         self,
         encodings: torch.tensor,
@@ -238,19 +250,22 @@ class D2E2SModel(PreTrainedModel):
         batch_size = encodings.shape[0]
         seq_lens = encodings.shape[1]
 
-        # encoder layer
-        # h = self.BertAdapterModel(input_ids=encodings, attention_mask=self.context_masks)[0]
-        h = self.deberta(input_ids=encodings, attention_mask=self.context_masks)[0]
+        # Get DeBERTa output with attention weights
+        deberta_output = self.deberta(
+            input_ids=encodings,
+            attention_mask=self.context_masks,
+            output_attentions=True,
+        )
+        h = deberta_output[0]
+        if self.store_attention:
+            self.attention_weights["deberta"] = deberta_output.attentions[-1]  # Last layer attention
+
+        # LSTM and attention
         self.output, _ = self.lstm(h, self.hidden)
         self.deberta_lstm_output = self.lstm_dropout(self.output)
         self.deberta_lstm_att_feature = self.deberta_lstm_output
 
-        # attention layers
-        # bert_lstm_feature_attention = self.attention_layer(self.bert_lstm_output, self.bert_lstm_output, self.context_masks[:,:seq_lens])
-        # self.bert_lstm_att_feature = self.bert_lstm_output + bert_lstm_feature_attention
-        # self.bert_lstm_att_feature = bert_lstm_feature_attention
-
-        # gcn layer
+        # GCN layers with attention capture
         h_syn_ori, pool_mask_origin = self.Syn_gcn(adj, h)
         h_syn_gcn, pool_mask = self.Syn_gcn(adj, self.deberta_lstm_att_feature)
         h_sem_ori, adj_sem_ori = self.Sem_gcn(h, encodings, seq_lens)
@@ -258,7 +273,12 @@ class D2E2SModel(PreTrainedModel):
             self.deberta_lstm_att_feature, encodings, seq_lens
         )
 
-        # fusion layer
+        if self.store_attention:
+            # Store semantic and syntactic GCN attention
+            self.attention_weights["gcn_sem"] = adj_sem_gcn
+            self.attention_weights["gcn_syn"] = pool_mask
+
+        # TIN attention and fusion
         h1 = self.TIN(
             h, h_syn_ori, h_syn_gcn, h_sem_ori, h_sem_gcn, adj_sem_ori, adj_sem_gcn
         )
