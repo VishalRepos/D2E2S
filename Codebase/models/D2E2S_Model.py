@@ -244,6 +244,7 @@ class D2E2SModel(PreTrainedModel):
         entity_spans: torch.tensor,
         entity_sample_masks: torch.tensor,
         adj,
+        evaluate=True,
     ):
         context_masks = context_masks.float()
         self.context_masks = context_masks
@@ -251,14 +252,17 @@ class D2E2SModel(PreTrainedModel):
         seq_lens = encodings.shape[1]
 
         # Get DeBERTa output with attention weights
-        deberta_output = self.deberta(
-            input_ids=encodings,
+        deberta_outputs = self.deberta(
+            input_ids=encodings, 
             attention_mask=self.context_masks,
-            output_attentions=True,
+            output_attentions=True,  # Enable attention output
+            return_dict=True
         )
-        h = deberta_output[0]
-        if self.store_attention:
-            self.attention_weights["deberta"] = deberta_output.attentions[-1]  # Last layer attention
+        h = deberta_outputs.last_hidden_state
+        
+        if self.store_attention and deberta_outputs.attentions is not None:
+            # Store the attention weights from the last layer
+            self.attention_weights['deberta'] = deberta_outputs.attentions[-1]
 
         # LSTM and attention
         self.output, _ = self.lstm(h, self.hidden)

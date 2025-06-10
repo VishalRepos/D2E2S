@@ -92,6 +92,9 @@ class D2E2S_Trainer(BaseTrainer):
 
         # load model
         config = AutoConfig.from_pretrained("microsoft/deberta-v3-base")
+        # Enable attention outputs
+        config.output_attentions = True
+        config.use_cache = False  # Needed for attention outputs
 
         model = D2E2SModel.from_pretrained(
             self.args.pretrained_deberta_name,
