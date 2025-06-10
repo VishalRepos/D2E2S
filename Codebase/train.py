@@ -1,11 +1,13 @@
 import argparse
 import math
 import os
+import json
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
 import torch
 import transformers
+import optuna
 from torch.optim import optimizer
 from torch.utils.data import DataLoader
 from tqdm import tqdm
@@ -25,10 +27,25 @@ import warnings
 
 warnings.filterwarnings("ignore")
 
+def create_hyperparameter_space(trial, args):
+    """Define the hyperparameter search space for Optuna."""
+    batch_sizes = [int(x) for x in args.batch_size_options.split(',')]
+    
+    return {
+        'learning_rate': trial.suggest_float('learning_rate', args.lr_min, args.lr_max, log=True),
+        'weight_decay': trial.suggest_float('weight_decay', args.weight_decay_min, args.weight_decay_max, log=True),
+        'batch_size': trial.suggest_categorical('batch_size', batch_sizes),
+        'max_span_size': trial.suggest_int('max_span_size', args.max_span_size_min, args.max_span_size_max),
+        'neg_entity_count': trial.suggest_int('neg_entity_count', args.neg_entity_count_min, args.neg_entity_count_max),
+        'neg_triple_count': trial.suggest_int('neg_triple_count', args.neg_triple_count_min, args.neg_triple_count_max),
+        'lr_warmup': trial.suggest_float('lr_warmup', args.lr_warmup_min, args.lr_warmup_max),
+        'max_grad_norm': trial.suggest_float('max_grad_norm', args.max_grad_norm_min, args.max_grad_norm_max),
+    }
 
 class D2E2S_Trainer(BaseTrainer):
-    def __init__(self, args: argparse.Namespace):
+    def __init__(self, args: argparse.Namespace, trial=None):
         super().__init__(args)
+        self.trial = trial
         self._tokenizer = AutoTokenizer.from_pretrained("microsoft/deberta-v3-base")
         self._predictions_path = os.path.join(
             self._log_path_predict, "predicted_%s_epoch_%s.json"
@@ -96,6 +113,7 @@ class D2E2S_Trainer(BaseTrainer):
             args=args,
         )
         model.to(args.device)
+        
         # create optimizer
         optimizer_params = self._get_optimizer_params(model)
         optimizer = AdamW(
@@ -104,6 +122,7 @@ class D2E2S_Trainer(BaseTrainer):
             weight_decay=args.weight_decay,
             correct_bias=False,
         )
+        
         # create scheduler
         scheduler = transformers.get_linear_schedule_with_warmup(
             optimizer,
@@ -122,10 +141,8 @@ class D2E2S_Trainer(BaseTrainer):
             scheduler,
             args.max_grad_norm,
         )
-        # eval validation set
-        if args.init_eval:
-            self._eval(model, test_dataset, input_reader, 0, updates_epoch)
 
+        best_f1 = 0
         # train
         for epoch in range(args.epochs):
             # train epoch
@@ -135,8 +152,22 @@ class D2E2S_Trainer(BaseTrainer):
 
             # eval validation sets
             if not args.final_eval or (epoch == args.epochs - 1):
-                # print(epoch)
-                self._eval(model, test_dataset, input_reader, epoch + 1, updates_epoch)
+                ner_eval, senti_eval, senti_nec_eval = self._eval(
+                    model, test_dataset, input_reader, epoch + 1, updates_epoch
+                )
+                
+                # Report intermediate objective value to Optuna
+                if self.trial is not None:
+                    current_f1 = float(senti_eval[2])  # Get F1 score
+                    self.trial.report(current_f1, epoch)
+                    
+                    # Handle pruning based on the intermediate value
+                    if self.trial.should_prune():
+                        raise optuna.TrialPruned()
+                    
+                    best_f1 = max(best_f1, current_f1)
+        
+        return best_f1
 
     def train_epoch(
         self,
@@ -301,6 +332,8 @@ class D2E2S_Trainer(BaseTrainer):
             dataset.label
         )
 
+        return ner_eval, senti_eval, senti_nec_eval
+
     def _log_filter_file(self, ner_eval, senti_eval, evaluator, epoch):
         f1 = float(senti_eval[2])
         if self.max_pair_f1 < f1:
@@ -374,13 +407,72 @@ class D2E2S_Trainer(BaseTrainer):
 
         return optimizer_params
 
+def objective(trial, args, train_path, test_path, types_path, input_reader_cls):
+    """Optuna objective function for hyperparameter optimization."""
+    # Update args with trial parameters
+    params = create_hyperparameter_space(trial, args)
+    for key, value in params.items():
+        setattr(args, key, value)
+    
+    # Create trainer with trial
+    trainer = D2E2S_Trainer(args, trial)
+    
+    # Train and get best F1 score
+    best_f1 = trainer._train(train_path, test_path, types_path, input_reader_cls)
+    
+    return best_f1
 
 if __name__ == "__main__":
     arg_parser = train_argparser()
-    trainer = D2E2S_Trainer(arg_parser)
-    trainer._train(
-        train_path=arg_parser.dataset_file["train"],
-        test_path=arg_parser.dataset_file["test"],
-        types_path=arg_parser.dataset_file["types_path"],
-        input_reader_cls=JsonInputReader,
-    )
+    
+    if arg_parser.tune:
+        print("Starting hyperparameter tuning...")
+        # Create Optuna study
+        study = optuna.create_study(
+            direction="maximize",
+            study_name="d2e2s_hyperparameter_optimization",
+            pruner=optuna.pruners.MedianPruner(
+                n_startup_trials=5,
+                n_warmup_steps=10,
+                interval_steps=1
+            )
+        )
+        
+        # Run optimization
+        study.optimize(
+            lambda trial: objective(
+                trial,
+                arg_parser,
+                arg_parser.dataset_file["train"],
+                arg_parser.dataset_file["test"],
+                arg_parser.dataset_file["types_path"],
+                JsonInputReader
+            ),
+            n_trials=arg_parser.n_trials,
+            timeout=arg_parser.timeout,
+        )
+        
+        # Print best results
+        print("\nBest trial:")
+        trial = study.best_trial
+        
+        print("  Value: ", trial.value)
+        print("  Params: ")
+        for key, value in trial.params.items():
+            print(f"    {key}: {value}")
+            
+        # Save best parameters to a file
+        best_params_path = os.path.join(arg_parser.log_path, "best_params.json")
+        with open(best_params_path, 'w') as f:
+            json.dump(trial.params, f, indent=4)
+        print(f"\nBest parameters saved to {best_params_path}")
+        
+    else:
+        print("Starting normal training...")
+        trainer = D2E2S_Trainer(arg_parser)
+        trainer._train(
+            train_path=arg_parser.dataset_file["train"],
+            test_path=arg_parser.dataset_file["test"],
+            types_path=arg_parser.dataset_file["types_path"],
+            input_reader_cls=JsonInputReader,
+        )

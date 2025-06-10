@@ -29,6 +29,9 @@ def train_argparser():
 
     # model argument
     parser = argparse.ArgumentParser()
+    
+    arg_parser.add_argument('--tune', default=False, action='store_true', help='Enable hyperparameter tuning')
+    
     parser.add_argument(
         "--dataset", default="14res", type=str, help="14res, 15res, 16res, 14lap"
     )
