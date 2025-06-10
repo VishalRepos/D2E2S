@@ -36,18 +36,24 @@ class D2E2S_Trainer(BaseTrainer):
 
         self._examples_path = os.path.join(self._log_path_predict, 'sample_%s_%s_epoch_%s.html')
 
-        os.makedirs(self._log_path_result, exist_ok=True)
+        # Add visualization paths
+        self._attention_viz_path = os.path.join(self._log_path_predict, 'attention_%s_epoch_%s.png')
+        self._multi_head_viz_path = os.path.join(self._log_path_predict, 'attention_heads_%s_epoch_%s.png')
 
+        os.makedirs(self._log_path_result, exist_ok=True)
         os.makedirs(self._log_path_predict, exist_ok=True)
+        
+        from models.visualization import AttentionVisualizer
+        self.visualizer = AttentionVisualizer(self._tokenizer)
+        
         self.max_pair_f1 = 40
         self.result_path = os.path.join(self._log_path_result, "result{}.txt".format(self.args.max_span_size))
 
-        # NEW: Add this line to initialize the device
+        # Device initialization
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print(f"Using device train.py 47: {self.device}")
         print(f"Transformers version: {transformers.__version__}")
 
-        # NEW: Add this method to the class
     def check_tensor_device(self, tensor_or_dict):
         if isinstance(tensor_or_dict, dict):
             return {k: self.check_tensor_device(v) for k, v in tensor_or_dict.items()}
@@ -149,30 +155,39 @@ class D2E2S_Trainer(BaseTrainer):
         total = dataset.sentence_count // self.args.batch_size
         for batch in tqdm(data_loader, total=total, desc='Train epoch %s' % epoch):
             model.train()
-            # NEW: Use the check_tensor_device method
             batch = self.check_tensor_device(batch)
 
-            # forward step
-            entity_logits, senti_logits, batch_loss = model(input_ids=batch['encodings'], 
-                                                            attention_mask=batch['context_masks'],
-                                                            entity_masks=batch['entity_masks'], 
-                                                            entity_sizes=batch['entity_sizes'],
-                                                            sentiments=batch['rels'], 
-                                                            senti_masks=batch['senti_masks'], 
-                                                            adj=batch['adj'])
+            # forward step with attention output
+            result = model(input_ids=batch['encodings'], 
+                        attention_mask=batch['context_masks'],
+                        entity_masks=batch['entity_masks'], 
+                        entity_sizes=batch['entity_sizes'],
+                        sentiments=batch['rels'], 
+                        senti_masks=batch['senti_masks'], 
+                        adj=batch['adj'],
+                        output_attentions=True)
+
+            if isinstance(result, tuple) and len(result) > 3:
+                entity_logits, senti_logits, batch_loss, attention_outputs = result
+            else:
+                entity_logits, senti_logits, batch_loss = result
+                attention_outputs = None
 
             # compute loss and optimize parameters
             epoch_loss = compute_loss.compute(entity_logits=entity_logits, senti_logits=senti_logits, batch_loss=batch_loss,
-                                              senti_types=batch['senti_types'], entity_types=batch['entity_types'],
-                                              entity_sample_masks=batch['entity_sample_masks'],
-                                              senti_sample_masks=batch['senti_sample_masks'])
+                                          senti_types=batch['senti_types'], entity_types=batch['entity_types'],
+                                          entity_sample_masks=batch['entity_sample_masks'],
+                                          senti_sample_masks=batch['senti_sample_masks'])
 
-            # logging
             iteration += 1
             global_iteration = epoch * updates_epoch + iteration
 
             if global_iteration % self.args.train_log_iter == 0:
                 self._log_train(optimizer, epoch_loss, epoch, iteration, global_iteration, dataset.label)
+                
+                # Visualize attention patterns periodically during training
+                if attention_outputs is not None:
+                    self._visualize_attention(batch, attention_outputs, epoch, global_iteration)
 
         return iteration
 
@@ -211,21 +226,36 @@ class D2E2S_Trainer(BaseTrainer):
             # iterate batches
             total = math.ceil(dataset.sentence_count / self.args.batch_size)
             for batch in tqdm(data_loader, total=total, desc='Evaluate epoch %s' % epoch):
-                # NEW: Use the check_tensor_device method
                 batch = self.check_tensor_device(batch)
 
-                # run model (forward pass)
-                result = model(encodings=batch['encodings'], context_masks=batch['context_masks'],
-                               entity_masks=batch['entity_masks'], entity_sizes=batch['entity_sizes'],
-                               entity_spans=batch['entity_spans'], entity_sample_masks=batch['entity_sample_masks'],
-                               evaluate=True, adj=batch['adj'])
-                entity_clf, senti_clf, rels = result
-                # evaluate batch, entity:tensor(16, 188, 3), senti_clf:tensor(16, 2, 4), rels:tensor(16, 2, 2)
+                # run model (forward pass) with attention outputs
+                result = model(encodings=batch['encodings'], 
+                           context_masks=batch['context_masks'],
+                           entity_masks=batch['entity_masks'], 
+                           entity_sizes=batch['entity_sizes'],
+                           entity_spans=batch['entity_spans'], 
+                           entity_sample_masks=batch['entity_sample_masks'],
+                           evaluate=True, 
+                           adj=batch['adj'],
+                           output_attentions=True)
+
+                if isinstance(result, tuple) and len(result) > 3:
+                    entity_clf, senti_clf, rels, attention_outputs = result
+                else:
+                    entity_clf, senti_clf, rels = result
+                    attention_outputs = None
+
+                # evaluate batch
                 evaluator.eval_batch(entity_clf, senti_clf, rels, batch)
+
+                # Visualize attention patterns for the first batch of each epoch
+                if iteration == 0 and attention_outputs is not None:
+                    self._visualize_attention(batch, attention_outputs, epoch, 0)
+                    
             global_iteration = epoch * updates_epoch + iteration
             ner_eval, senti_eval, senti_nec_eval = evaluator.compute_scores()
-            # print(self.result_path)
             self._log_filter_file(ner_eval, senti_eval, evaluator, epoch)
+
         self._log_eval(*ner_eval, *senti_eval, *senti_nec_eval,
                        epoch, iteration, global_iteration, dataset.label)
 
@@ -274,6 +304,32 @@ class D2E2S_Trainer(BaseTrainer):
 
         return optimizer_params
 
+    def _visualize_attention(self, batch, outputs, epoch, global_iteration):
+        """Visualize attention weights for a batch"""
+        if not hasattr(outputs, "attentions") or outputs.attentions is None:
+            return
+            
+        # Plot average attention across heads for last layer
+        fig = self.visualizer.plot_attention_weights(
+            outputs.attentions,
+            batch['encodings'],
+            title=f'Attention Pattern (Epoch {epoch}, Iteration {global_iteration})'
+        )
+        self.visualizer.save_attention_plot(
+            fig, 
+            self._attention_viz_path % (self.args.dataset, epoch)
+        )
+        
+        # Plot individual attention heads
+        fig = self.visualizer.plot_all_heads(
+            outputs.attentions,
+            batch['encodings'],
+            title=f'Attention Heads (Epoch {epoch}, Iteration {global_iteration})'
+        )
+        self.visualizer.save_attention_plot(
+            fig,
+            self._multi_head_viz_path % (self.args.dataset, epoch)
+        )
 
 if __name__ == '__main__':
     arg_parser = train_argparser()
