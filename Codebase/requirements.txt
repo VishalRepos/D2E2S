@@ -9,3 +9,5 @@ torch==2.4.0
 matplotlib==3.7.1
 torch_geometric==2.3.1
 pydantic>=2.7.0
+optuna>=3.0.0
+sentencepiece

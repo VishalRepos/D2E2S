@@ -2,6 +2,7 @@ import argparse
 import math
 import os
 import json
+import datetime
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
@@ -407,16 +408,38 @@ class D2E2S_Trainer(BaseTrainer):
 
 def objective(trial, args, train_path, test_path, types_path, input_reader_cls):
     """Optuna objective function for hyperparameter optimization."""
+    # Create hyperparameter output directory
+    hyperparam_dir = os.path.join(args.log_path, "hyperparameter_output")
+    os.makedirs(hyperparam_dir, exist_ok=True)
+    
     # Update args with trial parameters
     params = create_hyperparameter_space(trial, args)
     for key, value in params.items():
         setattr(args, key, value)
+    
+    # Print current trial parameters
+    print(f"\nTrial {trial.number} parameters:")
+    for key, value in params.items():
+        print(f"{key}: {value}")
     
     # Create trainer with trial
     trainer = D2E2S_Trainer(args, trial)
     
     # Train and get best F1 score
     best_f1 = trainer._train(train_path, test_path, types_path, input_reader_cls)
+    
+    # Save trial results
+    trial_results = {
+        "trial_number": trial.number,
+        "parameters": params,
+        "best_f1": best_f1,
+        "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    }
+    
+    # Save to individual trial file
+    trial_file = os.path.join(hyperparam_dir, f"trial_{trial.number}.json")
+    with open(trial_file, 'w') as f:
+        json.dump(trial_results, f, indent=4)
     
     return best_f1
 
@@ -425,6 +448,10 @@ if __name__ == "__main__":
     
     if arg_parser.tune:
         print("Starting hyperparameter tuning...")
+        # Create hyperparameter output directory
+        hyperparam_dir = os.path.join(arg_parser.log_path, "hyperparameter_output")
+        os.makedirs(hyperparam_dir, exist_ok=True)
+        
         # Create Optuna study
         study = optuna.create_study(
             direction="maximize",
@@ -460,10 +487,35 @@ if __name__ == "__main__":
             print(f"    {key}: {value}")
             
         # Save best parameters to a file
-        best_params_path = os.path.join(arg_parser.log_path, "best_params.json")
+        best_params_path = os.path.join(hyperparam_dir, "best_params.json")
         with open(best_params_path, 'w') as f:
             json.dump(trial.params, f, indent=4)
-        print(f"\nBest parameters saved to {best_params_path}")
+            
+        # Save complete study results
+        study_results = {
+            "best_trial": {
+                "number": trial.number,
+                "value": trial.value,
+                "params": trial.params
+            },
+            "all_trials": [
+                {
+                    "number": t.number,
+                    "value": t.value,
+                    "params": t.params,
+                    "state": t.state.name
+                }
+                for t in study.trials
+            ]
+        }
+        
+        study_results_path = os.path.join(hyperparam_dir, "study_results.json")
+        with open(study_results_path, 'w') as f:
+            json.dump(study_results, f, indent=4)
+            
+        print(f"\nHyperparameter tuning results saved to {hyperparam_dir}")
+        print(f"Best parameters saved to {best_params_path}")
+        print(f"Complete study results saved to {study_results_path}")
         
     else:
         print("Starting normal training...")
