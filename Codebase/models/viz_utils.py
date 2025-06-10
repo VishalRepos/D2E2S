@@ -85,7 +85,8 @@ class AttentionVisualizer:
             return  # Cannot visualize without tokens
 
         if deberta_attn is not None:
-            # DeBERTa attention            try:
+            # DeBERTa attention
+            try:
                 fig = self.plot_attention_weights(
                     deberta_attn.mean(dim=0).cpu().numpy(),
                     tokens,
