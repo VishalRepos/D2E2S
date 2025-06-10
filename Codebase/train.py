@@ -2,12 +2,9 @@ import argparse
 import math
 import os
 import json
-import datetime
 
-# Set memory management settings
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
-os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 import torch
 import transformers
 import optuna
@@ -35,10 +32,10 @@ def create_hyperparameter_space(trial, args):
     return {
         'learning_rate': trial.suggest_float('learning_rate', 1e-5, 1e-3, log=True),
         'weight_decay': trial.suggest_float('weight_decay', 1e-5, 1e-2, log=True),
-        'batch_size': trial.suggest_categorical('batch_size', [2, 4, 8]),  # Reduced batch sizes
-        'max_span_size': trial.suggest_int('max_span_size', 4, 6),  # Reduced max span size
-        'neg_entity_count': trial.suggest_int('neg_entity_count', 25, 75, 100),  # Reduced negative samples
-        'neg_triple_count': trial.suggest_int('neg_triple_count', 25, 75, 100),  # Reduced negative samples
+        'batch_size': trial.suggest_categorical('batch_size', [8, 16, 32, 64]),
+        'max_span_size': trial.suggest_int('max_span_size', 4, 8),
+        'neg_entity_count': trial.suggest_int('neg_entity_count', 50,100, 150),
+        'neg_triple_count': trial.suggest_int('neg_triple_count', 50,100, 150),
         'lr_warmup': trial.suggest_float('lr_warmup', 0.0, 0.2),
         'max_grad_norm': trial.suggest_float('max_grad_norm', 0.5, 2.0),
     }
@@ -60,12 +57,6 @@ class D2E2S_Trainer(BaseTrainer):
         self.result_path = os.path.join(
             self._log_path_result, "result{}.txt".format(self.args.max_span_size)
         )
-        
-        # Enable gradient checkpointing if using hyperparameter tuning
-        if trial is not None:
-            self.use_gradient_checkpointing = True
-        else:
-            self.use_gradient_checkpointing = False
 
     def _preprocess(self, args, input_reader_cls, types_path, train_path, test_path):
 
@@ -110,8 +101,6 @@ class D2E2S_Trainer(BaseTrainer):
 
         # load model
         config = AutoConfig.from_pretrained("microsoft/deberta-v3-base")
-        if self.use_gradient_checkpointing:
-            config.gradient_checkpointing = True
 
         model = D2E2SModel.from_pretrained(
             self.args.pretrained_deberta_name,
@@ -121,19 +110,8 @@ class D2E2S_Trainer(BaseTrainer):
             entity_types=input_reader.entity_type_count,
             args=args,
         )
-        
-        # Enable gradient checkpointing if specified
-        if self.use_gradient_checkpointing:
-            model.gradient_checkpointing_enable()
-            
         model.to(args.device)
         
-        # Use mixed precision training if available
-        if torch.cuda.is_available():
-            scaler = torch.cuda.amp.GradScaler()
-        else:
-            scaler = None
-
         # create optimizer
         optimizer_params = self._get_optimizer_params(model)
         optimizer = AdamW(
@@ -167,7 +145,7 @@ class D2E2S_Trainer(BaseTrainer):
         for epoch in range(args.epochs):
             # train epoch
             self.train_epoch(
-                model, compute_loss, optimizer, train_dataset, updates_epoch, epoch, scaler
+                model, compute_loss, optimizer, train_dataset, updates_epoch, epoch
             )
 
             # eval validation sets
@@ -197,8 +175,8 @@ class D2E2S_Trainer(BaseTrainer):
         dataset: Dataset,
         updates_epoch: int,
         epoch: int,
-        scaler=None
     ):
+
         # create data loader
         dataset.switch_mode(Dataset.TRAIN_MODE)
         data_loader = DataLoader(
@@ -216,65 +194,29 @@ class D2E2S_Trainer(BaseTrainer):
         total = dataset.sentence_count // self.args.batch_size
         for batch in tqdm(data_loader, total=total, desc="Train epoch %s" % epoch):
             model.train()
-            batch = util.to_device(batch, self.args.device)
+            batch = util.to_device(batch, arg_parser.device)
 
-            # Use mixed precision training if available
-            if scaler is not None:
-                with torch.cuda.amp.autocast():
-                    # forward step
-                    entity_logits, senti_logits, batch_loss = model(
-                        encodings=batch["encodings"],
-                        context_masks=batch["context_masks"],
-                        entity_masks=batch["entity_masks"],
-                        entity_sizes=batch["entity_sizes"],
-                        sentiments=batch["rels"],
-                        senti_masks=batch["senti_masks"],
-                        adj=batch["adj"],
-                    )
+            # forward step
+            entity_logits, senti_logits, batch_loss = model(
+                encodings=batch["encodings"],
+                context_masks=batch["context_masks"],
+                entity_masks=batch["entity_masks"],
+                entity_sizes=batch["entity_sizes"],
+                sentiments=batch["rels"],
+                senti_masks=batch["senti_masks"],
+                adj=batch["adj"],
+            )
 
-                    # compute loss
-                    epoch_loss = compute_loss.compute(
-                        entity_logits=entity_logits,
-                        senti_logits=senti_logits,
-                        batch_loss=batch_loss,
-                        senti_types=batch["senti_types"],
-                        entity_types=batch["entity_types"],
-                        entity_sample_masks=batch["entity_sample_masks"],
-                        senti_sample_masks=batch["senti_sample_masks"],
-                    )
-
-                # Scale loss and backpropagate
-                scaler.scale(epoch_loss).backward()
-                scaler.step(optimizer)
-                scaler.update()
-            else:
-                # forward step
-                entity_logits, senti_logits, batch_loss = model(
-                    encodings=batch["encodings"],
-                    context_masks=batch["context_masks"],
-                    entity_masks=batch["entity_masks"],
-                    entity_sizes=batch["entity_sizes"],
-                    sentiments=batch["rels"],
-                    senti_masks=batch["senti_masks"],
-                    adj=batch["adj"],
-                )
-
-                # compute loss and optimize parameters
-                epoch_loss = compute_loss.compute(
-                    entity_logits=entity_logits,
-                    senti_logits=senti_logits,
-                    batch_loss=batch_loss,
-                    senti_types=batch["senti_types"],
-                    entity_types=batch["entity_types"],
-                    entity_sample_masks=batch["entity_sample_masks"],
-                    senti_sample_masks=batch["senti_sample_masks"],
-                )
-
-                # Backpropagate
-                epoch_loss.backward()
-                optimizer.step()
-
-            optimizer.zero_grad()
+            # compute loss and optimize parameters
+            epoch_loss = compute_loss.compute(
+                entity_logits=entity_logits,
+                senti_logits=senti_logits,
+                batch_loss=batch_loss,
+                senti_types=batch["senti_types"],
+                entity_types=batch["entity_types"],
+                entity_sample_masks=batch["entity_sample_masks"],
+                senti_sample_masks=batch["senti_sample_masks"],
+            )
 
             # logging
             iteration += 1
@@ -509,58 +451,21 @@ if __name__ == "__main__":
         )
         
         # Print best results
-        print("\n" + "="*50)
-        print("HYPERPARAMETER TUNING RESULTS")
-        print("="*50)
-        
+        print("\nBest trial:")
         trial = study.best_trial
-        print(f"\nBest F1 Score: {trial.value:.4f}")
-        print("\nBest Parameters:")
-        print("-"*30)
+        
+        print("  Value: ", trial.value)
+        print("  Params: ")
         for key, value in trial.params.items():
-            print(f"{key:20}: {value}")
+            print(f"    {key}: {value}")
             
         # Save best parameters to a file
         best_params_path = os.path.join(arg_parser.log_path, "best_params.json")
         with open(best_params_path, 'w') as f:
-            json.dump({
-                "best_f1_score": float(trial.value),
-                "parameters": trial.params,
-                "dataset": arg_parser.dataset,
-                "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            }, f, indent=4)
+            json.dump(trial.params, f, indent=4)
         print(f"\nBest parameters saved to {best_params_path}")
         
-        # Print command to reproduce best parameters
-        print("\nCommand to reproduce best parameters:")
-        print("-"*50)
-        cmd = f"python train.py --dataset {arg_parser.dataset}"
-        for key, value in trial.params.items():
-            if isinstance(value, bool):
-                if value:
-                    cmd += f" --{key}"
-            else:
-                cmd += f" --{key} {value}"
-        print(cmd)
-        print("="*50)
-        
     else:
-        print("\n" + "="*50)
-        print("NORMAL TRAINING MODE")
-        print("="*50)
-        print("\nTraining Parameters:")
-        print("-"*30)
-        print(f"{'seed':20}: {arg_parser.seed}")
-        print(f"{'max_span_size':20}: {arg_parser.max_span_size}")
-        print(f"{'batch_size':20}: {arg_parser.batch_size}")
-        print(f"{'epochs':20}: {arg_parser.epochs}")
-        print(f"{'dataset':20}: {arg_parser.dataset}")
-        print(f"{'learning_rate':20}: {arg_parser.lr}")
-        print(f"{'weight_decay':20}: {arg_parser.weight_decay}")
-        print(f"{'lr_warmup':20}: {arg_parser.lr_warmup}")
-        print(f"{'max_grad_norm':20}: {arg_parser.max_grad_norm}")
-        print("="*50 + "\n")
-        
         print("Starting normal training...")
         trainer = D2E2S_Trainer(arg_parser)
         trainer._train(
