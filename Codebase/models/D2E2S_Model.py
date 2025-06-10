@@ -1,7 +1,3 @@
-from transformers import BertModel
-from transformers import BertPreTrainedModel
-from transformers import BertConfig
-from transformers import AutoModel, AutoConfig, PreTrainedModel
 from torch import nn as nn
 import torch
 from trainer import util, sampling
@@ -16,12 +12,14 @@ import numpy as np
 from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
 from models.Channel_Fusion import Orthographic_projection_fusion, TextCentredSP
-
+from transformers import PreTrainedModel
+from transformers import AutoConfig, AutoModel
 
 USE_CUDA = torch.cuda.is_available()
 
+
 def get_token(h: torch.tensor, x: torch.tensor, token: int):
-    """ Get specific token embedding (e.g. [CLS]) """
+    """Get specific token embedding (e.g. [CLS])"""
     emb_size = h.shape[-1]
 
     token_h = h.view(-1, emb_size)
@@ -32,9 +30,18 @@ def get_token(h: torch.tensor, x: torch.tensor, token: int):
 
     return token_h
 
+
 class D2E2SModel(PreTrainedModel):
-    VERSION = '1.1'
-    def __init__(self, config, sentiment_types: int, entity_types: int, args, base_model):
+    VERSION = "1.1"
+
+    def __init__(
+        self,
+        config: AutoConfig,
+        cls_token: int,
+        sentiment_types: int,
+        entity_types: int,
+        args,
+    ):
         super(D2E2SModel, self).__init__(config)
         # self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         # 1、parameters init
@@ -66,33 +73,24 @@ class D2E2SModel(PreTrainedModel):
         self.batch_size = self.args.batch_size
         self.USE_CUDA = USE_CUDA
         self.max_pairs = 100
-        self.bert_feature_dim = self.args.bert_feature_dim
+        self.deberta_feature_dim = self.args.deberta_feature_dim
         self.gcn_dim = self.args.gcn_dim
         self.gcn_dropout = self.args.gcn_dropout
 
+        # 2、DEBERT model
+        self.deberta = AutoModel.from_pretrained(
+            "microsoft/deberta-v3-base", config=config
+        )
 
-        # Use the correct hidden size from the config
-        self.hidden_dim = config.hidden_size
-
-        print(f"Model type ------------------------------: {config.model_type}")
-        print(f"Config model name -------------------- : {config._name_or_path}")
-        print(f"Config hidden size-------------------- : {config.hidden_size}")
-        print(f"D2E2SModel initialized with hidden_dim----------------This should now be 1024 for DeBERTa-v3--------------: {self.hidden_dim}")
-
-        # NEW: Add projection layer if needed
-        if self.hidden_dim != args.hidden_dim:
-            self.deberta_projection = nn.Linear(self.hidden_dim, args.hidden_dim)
-            print(f"Added projection layer from {self.hidden_dim} to {args.hidden_dim}")
-
-        self.Syn_gcn = GCN(input_dim=self.hidden_dim, hidden_dim=self.hidden_dim)
-        self.Sem_gcn = SemGCN(self.args, emb_dim=self.hidden_dim)
-        self.TIN = TIN(hidden_dim=self.hidden_dim)
-        
-        # Update these lines to use the new hidden_dim
-        self.senti_classifier = nn.Linear(self.hidden_dim * 3 + self._size_embedding * 2, sentiment_types)
-        self.entity_classifier = nn.Linear(self.hidden_dim * 2 + self._size_embedding, entity_types)
-        
-        
+        # self.BertAdapterModel = BertAdapterModel(config)
+        self.Syn_gcn = GCN()
+        self.Sem_gcn = SemGCN(self.args)
+        self.senti_classifier = nn.Linear(
+            config.hidden_size * 3 + self._size_embedding * 2, sentiment_types
+        )
+        self.entity_classifier = nn.Linear(
+            config.hidden_size * 2 + self._size_embedding, entity_types
+        )
         self.size_embeddings = nn.Embedding(100, self._size_embedding)
         self.dropout = nn.Dropout(self._prop_drop)
         self._sentiment_types = sentiment_types
@@ -100,11 +98,17 @@ class D2E2SModel(PreTrainedModel):
         self._max_pairs = self.max_pairs
         self.neg_span_all = 0
         self.neg_span = 0
-        self.number = 1 
+        self.number = 1
 
         # 3、LSTM Layers + Attention Layers
-        self.lstm = nn.LSTM(self._emb_dim, int(self.hidden_dim), self.layers, batch_first=True,
-                            bidirectional=self._is_bidirectional, dropout=self.drop_rate)
+        self.lstm = nn.LSTM(
+            self._emb_dim,
+            int(self._hidden_dim),
+            self.layers,
+            batch_first=True,
+            bidirectional=self._is_bidirectional,
+            dropout=self.drop_rate,
+        )
         self.attention_layer = SelfAttention(self.args)
         self.dropout1 = torch.nn.Dropout(0.5)
         self.dropout2 = torch.nn.Dropout(0)
@@ -123,14 +127,25 @@ class D2E2SModel(PreTrainedModel):
 
         if self.USE_CUDA:
             self.hidden = (
-                weight.new(self.layers * self.number, self.batch_size, self.hidden_dim).zero_().float().cuda(),
+                weight.new(self.layers * self.number, self.batch_size, self._hidden_dim)
+                .zero_()
+                .float()
+                .cuda(),
                 # self.hidden = 384
-                weight.new(self.layers * self.number, self.batch_size, self.hidden_dim).zero_().float().cuda()
+                weight.new(self.layers * self.number, self.batch_size, self._hidden_dim)
+                .zero_()
+                .float()
+                .cuda(),
             )
         else:
-            self.hidden = (weight.new(self.layers * self.number, self.batch_size, self.hidden_dim).zero_().float(),
-                           weight.new(self.layers * self.number, self.batch_size, self.hidden_dim).zero_().float()
-                           )
+            self.hidden = (
+                weight.new(self.layers * self.number, self.batch_size, self._hidden_dim)
+                .zero_()
+                .float(),
+                weight.new(self.layers * self.number, self.batch_size, self._hidden_dim)
+                .zero_()
+                .float(),
+            )
 
         # 6、weight initialization
         self.init_weights()
@@ -149,19 +164,20 @@ class D2E2SModel(PreTrainedModel):
         # self.Biaffine_ATT = BiaffineAttention(self.bert_feature_dim, self.bert_feature_dim)
 
         # 7、feature merge model
-        # self.TIN = TIN(self.bert_feature_dim)
-        # self.TIN = TIN(hidden_dim=config.hidden_size)
+        self.TIN = TIN(self.deberta_feature_dim)
         # self.TextCentredSP = TextCentredSP(self.bert_feature_dim*2, self.shared_dim, self.private_dim)
 
-    def _forward_train(self, h, attention_mask, entity_masks, entity_sizes, sentiments, senti_masks, adj):
-        # Move all inputs to the correct device
-        h = h.to(self.device)
-        attention_mask = attention_mask.to(self.device)
-        entity_masks = entity_masks.to(self.device)
-        entity_sizes = entity_sizes.to(self.device)
-        sentiments = sentiments.to(self.device)
-        senti_masks = senti_masks.to(self.device)
-        adj = adj.to(self.device)
+    def _forward_train(
+        self,
+        encodings: torch.tensor,
+        context_masks: torch.tensor,
+        entity_masks: torch.tensor,
+        entity_sizes: torch.tensor,
+        sentiments: torch.tensor,
+        senti_masks: torch.tensor,
+        adj,
+    ):
+
         # Parameters init
         # attention_mask = attention_mask.float()
         self.context_masks = attention_mask
@@ -170,13 +186,11 @@ class D2E2SModel(PreTrainedModel):
 
         print(f"_forward_train - h shape: {h.shape}, adj shape: {adj.shape}")
         # encoder layer
-        # h = self.BertAdapterModel(input_ids=input_ids, attention_mask=self.attention_mask)[0]
-        # h = self.deberta(input_ids=input_ids, attention_mask=attention_mask)[0]
-        # Add this line to project the output
-        # h = self.deberta_projection(h)
+        # h = self.BertAdapterModel(input_ids=encodings, attention_mask=self.context_masks)[0]
+        h = self.deberta(input_ids=encodings, attention_mask=self.context_masks)[0]
         self.output, _ = self.lstm(h, self.hidden)
-        self.bert_lstm_output = self.lstm_dropout(self.output)
-        self.bert_lstm_att_feature = self.bert_lstm_output
+        self.deberta_lstm_output = self.lstm_dropout(self.output)
+        self.deberta_lstm_att_feature = self.deberta_lstm_output
 
         # attention layers
         # bert_lstm_feature_attention = self.attention_layer(self.bert_lstm_output, self.bert_lstm_output, self.attention_mask[:,:seq_lens])
@@ -185,48 +199,67 @@ class D2E2SModel(PreTrainedModel):
         # gcn layer
         print(f"_forward_train - h shape: {h.shape}, adj shape: {adj.shape}")
         h_syn_ori, pool_mask_origin = self.Syn_gcn(adj, h)
-        h_syn_gcn, pool_mask = self.Syn_gcn(adj, self.bert_lstm_att_feature)
-        h_sem_ori, adj_sem_ori = self.Sem_gcn(h, attention_mask, seq_lens)  # Changed 'encodings' to 'attention_mask'
-        h_sem_gcn, adj_sem_gcn = self.Sem_gcn(self.bert_lstm_att_feature, attention_mask, seq_lens)  # Changed 'encodings' to 'attention_mask'
+        h_syn_gcn, pool_mask = self.Syn_gcn(adj, self.deberta_lstm_att_feature)
+        h_sem_ori, adj_sem_ori = self.Sem_gcn(h, encodings, seq_lens)
+        h_sem_gcn, adj_sem_gcn = self.Sem_gcn(
+            self.deberta_lstm_att_feature, encodings, seq_lens
+        )
 
         # fusion layer
-        h1 = self.TIN(h, h_syn_ori, h_syn_gcn, h_sem_ori, h_sem_gcn, adj_sem_ori, adj_sem_gcn)
-        h = self.attention_layer(h1, h1, self.attention_mask[:, :seq_lens]) + h1
+        h1 = self.TIN(
+            h, h_syn_ori, h_syn_gcn, h_sem_ori, h_sem_gcn, adj_sem_ori, adj_sem_gcn
+        )
+        h = self.attention_layer(h1, h1, self.context_masks[:, :seq_lens]) + h1
         # h_feature, h_syn_origin, h_syn_feature, h_sem_origin, h_sem_feature = self.TIN(h, h_syn_ori, h_syn_gcn, h_sem_ori, h_sem_gcn)
         # h = self.TextCentredSP(h_syn_feature, h_sem_feature)
 
         size_embeddings = self.size_embeddings(entity_sizes)
-        entity_clf, entity_spans_pool = self._classify_entities(input_ids, h, entity_masks, size_embeddings, self.args)
+        entity_clf, entity_spans_pool = self._classify_entities(
+            encodings, h, entity_masks, size_embeddings, self.args
+        )
 
         # relation_classify
-        h_large = h.unsqueeze(1).repeat(1, max(min(sentiments.shape[1], self._max_pairs), 1), 1, 1)
-        senti_clf = torch.zeros([batch_size, sentiments.shape[1], self._sentiment_types]).to(self.senti_classifier.weight.device)
+        h_large = h.unsqueeze(1).repeat(
+            1, max(min(sentiments.shape[1], self._max_pairs), 1), 1, 1
+        )
+        senti_clf = torch.zeros(
+            [batch_size, sentiments.shape[1], self._sentiment_types]
+        ).to(self.senti_classifier.weight.device)
 
         # obtain sentiment logits
         # chunk processing to reduce memory usage
         for i in range(0, sentiments.shape[1], self._max_pairs):
             # classify sentiment candidates
-            chunk_senti_logits = self._classify_sentiments(entity_spans_pool, size_embeddings,
-                                                        sentiments, senti_masks, h_large, i)
-            senti_clf[:, i:i + self._max_pairs, :] = chunk_senti_logits
+            chunk_senti_logits = self._classify_sentiments(
+                entity_spans_pool, size_embeddings, sentiments, senti_masks, h_large, i
+            )
+            senti_clf[:, i : i + self._max_pairs, :] = chunk_senti_logits
 
         batch_loss = compute_loss(adj_sem_ori, adj_sem_gcn, adj)
 
         return entity_clf, senti_clf, batch_loss
 
-    def _forward_eval(self, h, attention_mask, entity_masks, entity_sizes, entity_spans, entity_sample_masks, adj):
-
-        # attention_mask = attention_mask.float()
-        self.context_masks = attention_mask
-        batch_size = input_ids.shape[0]
-        seq_lens = input_ids.shape[1]
+    def _forward_eval(
+        self,
+        encodings: torch.tensor,
+        context_masks: torch.tensor,
+        entity_masks: torch.tensor,
+        entity_sizes: torch.tensor,
+        entity_spans: torch.tensor,
+        entity_sample_masks: torch.tensor,
+        adj,
+    ):
+        context_masks = context_masks.float()
+        self.context_masks = context_masks
+        batch_size = encodings.shape[0]
+        seq_lens = encodings.shape[1]
 
         # encoder layer
-        # h = self.BertAdapterModel(input_ids=input_ids, attention_mask=self.attention_mask)[0]
-        # h = self.deberta(input_ids=input_ids, attention_mask=attention_mask)[0]
+        # h = self.BertAdapterModel(input_ids=encodings, attention_mask=self.context_masks)[0]
+        h = self.deberta(input_ids=encodings, attention_mask=self.context_masks)[0]
         self.output, _ = self.lstm(h, self.hidden)
-        self.bert_lstm_output = self.lstm_dropout(self.output)
-        self.bert_lstm_att_feature = self.bert_lstm_output
+        self.deberta_lstm_output = self.lstm_dropout(self.output)
+        self.deberta_lstm_att_feature = self.deberta_lstm_output
 
         # attention layers
         # bert_lstm_feature_attention = self.attention_layer(self.bert_lstm_output, self.bert_lstm_output, self.attention_mask[:,:seq_lens])
@@ -235,38 +268,51 @@ class D2E2SModel(PreTrainedModel):
 
         # gcn layer
         h_syn_ori, pool_mask_origin = self.Syn_gcn(adj, h)
-        h_syn_gcn, pool_mask = self.Syn_gcn(adj, self.bert_lstm_att_feature)
-        h_sem_ori, adj_sem_ori = self.Sem_gcn(h, input_ids, seq_lens)
-        h_sem_gcn, adj_sem_gcn = self.Sem_gcn(self.bert_lstm_att_feature, input_ids, seq_lens)
+        h_syn_gcn, pool_mask = self.Syn_gcn(adj, self.deberta_lstm_att_feature)
+        h_sem_ori, adj_sem_ori = self.Sem_gcn(h, encodings, seq_lens)
+        h_sem_gcn, adj_sem_gcn = self.Sem_gcn(
+            self.deberta_lstm_att_feature, encodings, seq_lens
+        )
 
         # fusion layer
-        h1 = self.TIN(h, h_syn_ori, h_syn_gcn, h_sem_ori, h_sem_gcn, adj_sem_ori, adj_sem_gcn)
-        h = self.attention_layer(h1, h1, self.attention_mask[:, :seq_lens]) + h1
+        h1 = self.TIN(
+            h, h_syn_ori, h_syn_gcn, h_sem_ori, h_sem_gcn, adj_sem_ori, adj_sem_gcn
+        )
+        h = self.attention_layer(h1, h1, self.context_masks[:, :seq_lens]) + h1
         # h_feature, h_syn_origin, h_syn_feature, h_sem_origin, h_sem_feature = self.TIN(h, h_syn_ori, h_syn_gcn, h_sem_ori, h_sem_gcn)
         # h = self.TextCentredSP(h_syn_feature, h_sem_feature)
 
         # entity_classify
-        size_embeddings = self.size_embeddings(entity_sizes)  # embed entity candidate sizes
-        entity_clf, entity_spans_pool = self._classify_entities(input_ids, h, entity_masks, size_embeddings, self.args)
+        size_embeddings = self.size_embeddings(
+            entity_sizes
+        )  # embed entity candidate sizes
+        entity_clf, entity_spans_pool = self._classify_entities(
+            encodings, h, entity_masks, size_embeddings, self.args
+        )
 
         # ignore entity candidates that do not constitute an actual entity for sentiments (based on classifier)
-        ctx_size = attention_mask.shape[-1]
-        sentiments, senti_masks, senti_sample_masks = self._filter_spans(entity_clf, entity_spans,
-                                                                    entity_sample_masks, ctx_size)
+        ctx_size = context_masks.shape[-1]
+        sentiments, senti_masks, senti_sample_masks = self._filter_spans(
+            entity_clf, entity_spans, entity_sample_masks, ctx_size
+        )
         senti_sample_masks = senti_sample_masks.float().unsqueeze(-1)
-        h_large = h.unsqueeze(1).repeat(1, max(min(sentiments.shape[1], self._max_pairs), 1), 1, 1)
-        senti_clf = torch.zeros([batch_size, sentiments.shape[1], self._sentiment_types]).to(
-            self.senti_classifier.weight.device)
+        h_large = h.unsqueeze(1).repeat(
+            1, max(min(sentiments.shape[1], self._max_pairs), 1), 1, 1
+        )
+        senti_clf = torch.zeros(
+            [batch_size, sentiments.shape[1], self._sentiment_types]
+        ).to(self.senti_classifier.weight.device)
 
         # obtain sentiment logits
         # chunk processing to reduce memory usage
         for i in range(0, sentiments.shape[1], self._max_pairs):
             # classify sentiment candidates
-            chunk_senti_logits = self._classify_sentiments(entity_spans_pool, size_embeddings,
-                                                        sentiments, senti_masks, h_large, i)
+            chunk_senti_logits = self._classify_sentiments(
+                entity_spans_pool, size_embeddings, sentiments, senti_masks, h_large, i
+            )
             # apply sigmoid
             chunk_senti_clf = torch.sigmoid(chunk_senti_logits)
-            senti_clf[:, i:i + self._max_pairs, :] = chunk_senti_clf
+            senti_clf[:, i : i + self._max_pairs, :] = chunk_senti_clf
 
         senti_clf = senti_clf * senti_sample_masks  # mask
 
@@ -290,14 +336,22 @@ class D2E2SModel(PreTrainedModel):
             if self.args.span_generator == "Max":
                 entity_spans_pool = entity_spans_pool.max(dim=2)[0]
             else:
-                entity_spans_pool = entity_spans_pool.mean(dim=2, keepdim=True).squeeze(-2)
+                entity_spans_pool = entity_spans_pool.mean(dim=2, keepdim=True).squeeze(
+                    -2
+                )
 
         # get cls token as candidate context representation
         entity_ctx = get_token(h, input_ids, self._cls_token)
 
         # create candidate representations including context, max pooled span and size embedding
-        entity_repr = torch.cat([entity_ctx.unsqueeze(1).repeat(1, entity_spans_pool.shape[1], 1),
-                                 entity_spans_pool, size_embeddings], dim=2)
+        entity_repr = torch.cat(
+            [
+                entity_ctx.unsqueeze(1).repeat(1, entity_spans_pool.shape[1], 1),
+                entity_spans_pool,
+                size_embeddings,
+            ],
+            dim=2,
+        )
         entity_repr = self.dropout(entity_repr)
 
         # classify entity candidates
@@ -305,14 +359,16 @@ class D2E2SModel(PreTrainedModel):
 
         return entity_clf, entity_spans_pool
 
-    def _classify_sentiments(self, entity_spans, size_embeddings, sentiments, senti_masks, h, chunk_start):
+    def _classify_sentiments(
+        self, entity_spans, size_embeddings, sentiments, senti_masks, h, chunk_start
+    ):
         batch_size = sentiments.shape[0]
 
         # create chunks if necessary
         if sentiments.shape[1] > self._max_pairs:
-            sentiments = sentiments[:, chunk_start:chunk_start + self._max_pairs]
-            senti_masks = senti_masks[:, chunk_start:chunk_start + self._max_pairs]
-            h = h[:, :sentiments.shape[1], :]
+            sentiments = sentiments[:, chunk_start : chunk_start + self._max_pairs]
+            senti_masks = senti_masks[:, chunk_start : chunk_start + self._max_pairs]
+            h = h[:, : sentiments.shape[1], :]
 
         # get pairs of entity candidate representations
         entity_pairs = util.batch_index(entity_spans, sentiments)
@@ -320,7 +376,9 @@ class D2E2SModel(PreTrainedModel):
 
         # get corresponding size embeddings
         size_pair_embeddings = util.batch_index(size_embeddings, sentiments)
-        size_pair_embeddings = size_pair_embeddings.view(batch_size, size_pair_embeddings.shape[1], -1)
+        size_pair_embeddings = size_pair_embeddings.view(
+            batch_size, size_pair_embeddings.shape[1], -1
+        )
 
         # sentiment context (context between entity candidate pair)
         # mask non entity candidate tokens
@@ -340,21 +398,23 @@ class D2E2SModel(PreTrainedModel):
         chunk_senti_logits = self.senti_classifier(senti_repr)
         return chunk_senti_logits
 
-    def log_sample_total(self,neg_entity_count_all):
-        log_path = os.path.join('./log/Sample/', 'countSample.txt')
-        with open(log_path, mode='a', encoding='utf-8') as f:
-            f.write('neg_entity_count_all: \n')
+    def log_sample_total(self, neg_entity_count_all):
+        log_path = os.path.join("./log/Sample/", "countSample.txt")
+        with open(log_path, mode="a", encoding="utf-8") as f:
+            f.write("neg_entity_count_all: \n")
             self.neg_span_all += len(neg_entity_count_all)
             f.write(str(self.neg_span_all))
-            f.write('\nneg_entity_count: \n')
-            self.neg_span += len((neg_entity_count_all !=0).nonzero())
+            f.write("\nneg_entity_count: \n")
+            self.neg_span += len((neg_entity_count_all != 0).nonzero())
             f.write(str(self.neg_span))
-            f.write('\n')
+            f.write("\n")
         f.close()
 
     def _filter_spans(self, entity_clf, entity_spans, entity_sample_masks, ctx_size):
         batch_size = entity_clf.shape[0]
-        entity_logits_max = entity_clf.argmax(dim=-1) * entity_sample_masks.long()  # get entity type (including none)
+        entity_logits_max = (
+            entity_clf.argmax(dim=-1) * entity_sample_masks.long()
+        )  # get entity type (including none)
         batch_sentiments = []
         batch_senti_masks = []
         batch_senti_sample_masks = []
@@ -370,7 +430,6 @@ class D2E2SModel(PreTrainedModel):
             non_zero_spans = entity_spans[i][non_zero_indices].tolist()
             non_zero_indices = non_zero_indices.tolist()
 
-
             # create sentiments and masks
             for i1, s1 in zip(non_zero_indices, non_zero_spans):
                 for i2, s2 in zip(non_zero_indices, non_zero_spans):
@@ -382,19 +441,25 @@ class D2E2SModel(PreTrainedModel):
             if not rels:
                 # case: no more than two spans classified as entities
                 batch_sentiments.append(torch.tensor([[0, 0]], dtype=torch.long))
-                batch_senti_masks.append(torch.tensor([[0] * ctx_size], dtype=torch.bool))
+                batch_senti_masks.append(
+                    torch.tensor([[0] * ctx_size], dtype=torch.bool)
+                )
                 batch_senti_sample_masks.append(torch.tensor([0], dtype=torch.bool))
             else:
                 # case: more than two spans classified as entities
                 batch_sentiments.append(torch.tensor(rels, dtype=torch.long))
                 batch_senti_masks.append(torch.stack(senti_masks))
-                batch_senti_sample_masks.append(torch.tensor(sample_masks, dtype=torch.bool))
+                batch_senti_sample_masks.append(
+                    torch.tensor(sample_masks, dtype=torch.bool)
+                )
 
         # stack
         device = self.senti_classifier.weight.device
         batch_sentiments = util.padded_stack(batch_sentiments).to(device)
         batch_senti_masks = util.padded_stack(batch_senti_masks).to(device)
-        batch_senti_sample_masks = util.padded_stack(batch_senti_sample_masks).to(device)
+        batch_senti_sample_masks = util.padded_stack(batch_senti_sample_masks).to(
+            device
+        )
 
         return batch_sentiments, batch_senti_masks, batch_senti_sample_masks
 
@@ -415,6 +480,7 @@ class D2E2SModel(PreTrainedModel):
         else:
             return self._forward_eval(deberta_output, attention_mask, entity_masks, entity_sizes, 
                                     entity_spans, entity_sample_masks, adj)
+
 
 def compute_loss(p, q, k):
 
