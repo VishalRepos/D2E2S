@@ -11,6 +11,12 @@ class AttentionVisualizer:
         
     def plot_attention_weights(self, attention_weights, tokens, title="Attention Weights"):
         """Plot attention weights as a heatmap."""
+        if attention_weights is None:
+            raise ValueError("Cannot plot None attention weights")
+            
+        if not isinstance(attention_weights, np.ndarray):
+            attention_weights = np.array(attention_weights)
+            
         plt.figure(figsize=(10, 8))
         sns.heatmap(
             attention_weights,
@@ -73,34 +79,45 @@ class AttentionVisualizer:
     def visualize_model_attention(self, deberta_attn, lstm_attn=None, gcn_attn=None, 
                                 tokens=None, save_prefix=""):
         """Visualize attention from different components of the model."""
-        if tokens is None:
+        if tokens is None and deberta_attn is not None:
             tokens = [f"Token_{i}" for i in range(deberta_attn.shape[-1])]
-            
-        # DeBERTa attention
-        fig = self.plot_attention_weights(
-            deberta_attn.mean(dim=0).cpu().numpy(),
-            tokens,
-            "DeBERTa Layer Attention"
-        )
-        if save_prefix:
-            self.save_attention_plot(fig, f"{save_prefix}_deberta_attn.png")
-            
+        elif tokens is None:
+            return  # Cannot visualize without tokens
+
+        if deberta_attn is not None:
+            # DeBERTa attention            try:
+                fig = self.plot_attention_weights(
+                    deberta_attn.mean(dim=0).cpu().numpy(),
+                    tokens,
+                    "DeBERTa Layer Attention"
+                )
+                if save_prefix:
+                    self.save_attention_plot(fig, f"{save_prefix}_deberta_attn.png")
+            except Exception as e:
+                print(f"Warning: Could not visualize DeBERTa attention: {e}")
+                
         # LSTM attention if available 
         if lstm_attn is not None:
-            fig = self.plot_attention_weights(
-                lstm_attn.cpu().numpy(),
-                tokens,
-                "LSTM Attention"
-            )
-            if save_prefix:
-                self.save_attention_plot(fig, f"{save_prefix}_lstm_attn.png")
+            try:
+                fig = self.plot_attention_weights(
+                    lstm_attn.cpu().numpy(),
+                    tokens,
+                    "LSTM Attention"
+                )
+                if save_prefix:
+                    self.save_attention_plot(fig, f"{save_prefix}_lstm_attn.png")
+            except Exception as e:
+                print(f"Warning: Could not visualize LSTM attention: {e}")
                 
         # GCN attention if available
         if gcn_attn is not None:
-            fig = self.plot_attention_weights(
-                gcn_attn.cpu().numpy(),
-                tokens,
-                "GCN Attention"
-            )
-            if save_prefix:
-                self.save_attention_plot(fig, f"{save_prefix}_gcn_attn.png")
+            try:
+                fig = self.plot_attention_weights(
+                    gcn_attn.cpu().numpy(),
+                    tokens, 
+                    "GCN Attention"
+                )
+                if save_prefix:
+                    self.save_attention_plot(fig, f"{save_prefix}_gcn_attn.png")
+            except Exception as e:
+                print(f"Warning: Could not visualize GCN attention: {e}")
