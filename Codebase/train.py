@@ -37,8 +37,8 @@ def create_hyperparameter_space(trial, args):
         'weight_decay': trial.suggest_float('weight_decay', 1e-5, 1e-2, log=True),
         'batch_size': trial.suggest_categorical('batch_size', [2, 4, 8]),  # Reduced batch sizes
         'max_span_size': trial.suggest_int('max_span_size', 4, 6),  # Reduced max span size
-        'neg_entity_count': trial.suggest_int('neg_entity_count', 25, 75),  # Reduced negative samples
-        'neg_triple_count': trial.suggest_int('neg_triple_count', 25, 75),  # Reduced negative samples
+        'neg_entity_count': trial.suggest_int('neg_entity_count', 25, 75, 100),  # Reduced negative samples
+        'neg_triple_count': trial.suggest_int('neg_triple_count', 25, 75, 100),  # Reduced negative samples
         'lr_warmup': trial.suggest_float('lr_warmup', 0.0, 0.2),
         'max_grad_norm': trial.suggest_float('max_grad_norm', 0.5, 2.0),
     }
