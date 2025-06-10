@@ -83,6 +83,10 @@ class D2E2S_Trainer(BaseTrainer):
         # set seed
         set_seed(args.seed)
 
+        # Create attention visualization directory
+        self._attention_viz_path = os.path.join(self._log_path, "attention_viz")
+        os.makedirs(self._attention_viz_path, exist_ok=True)
+
         train_label, test_label = "train", "test"
         input_reader, updates_total, updates_epoch = self._preprocess(
             args, input_reader_cls, types_path, train_path, test_path
@@ -193,22 +197,32 @@ class D2E2S_Trainer(BaseTrainer):
 
             # Visualize attention if enabled
             if visualize_attention:
+                print(f"\nGenerating attention visualization for epoch {epoch} batch {batch_idx}")
                 tokens = self._tokenizer.convert_ids_to_tokens(
                     batch["encodings"][0].cpu().numpy()
                 )
                 if hasattr(model, "attention_weights"):
+                    # Log attention weights for debugging
+                    for k, v in model.attention_weights.items():
+                        if v is not None:
+                            print(f"{k} attention shape: {v.shape}")
+                            
                     # Generate visualizations
+                    viz_path = os.path.join(
+                        self._attention_viz_path,
+                        f"train_epoch{epoch}_batch{batch_idx}"
+                    )
+                    print(f"Saving attention visualizations to: {viz_path}")
+                    
                     model.visualizer.visualize_model_attention(
                         model.attention_weights.get('deberta'),
                         model.attention_weights.get('gcn_sem'),
                         model.attention_weights.get('gcn_syn'),
                         tokens,
-                        save_prefix=os.path.join(
-                            self._attention_viz_path,
-                            f"train_epoch{epoch}_batch{batch_idx}"
-                        )
+                        save_prefix=viz_path
                     )
-                model.store_attention_weights(False)
+                else:
+                    print("No attention weights found in model")
 
             # Compute loss and optimize parameters
             epoch_loss = compute_loss.compute(

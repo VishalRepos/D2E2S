@@ -43,6 +43,14 @@ class D2E2SModel(PreTrainedModel):
         args,
     ):
         super(D2E2SModel, self).__init__(config)
+
+        # Add visualizer initialization
+        from models.viz_utils import AttentionVisualizer
+
+        self.visualizer = AttentionVisualizer()
+        self.store_attention = False
+        self.attention_weights = {}
+
         # 1、parameters init
         self.args = args
         self._size_embedding = self.args.size_embedding
@@ -153,13 +161,6 @@ class D2E2SModel(PreTrainedModel):
         self.TIN = TIN(self.deberta_feature_dim)
         # self.TextCentredSP = TextCentredSP(self.bert_feature_dim*2, self.shared_dim, self.private_dim)
 
-        # Add visualization support
-        from models.viz_utils import AttentionVisualizer
-
-        self.visualizer = AttentionVisualizer()
-        self.store_attention = False
-        self.attention_weights = {}
-
     def store_attention_weights(self, should_store=True):
         """Enable or disable storing attention weights during forward pass."""
         self.store_attention = should_store
@@ -253,13 +254,13 @@ class D2E2SModel(PreTrainedModel):
 
         # Get DeBERTa output with attention weights
         deberta_outputs = self.deberta(
-            input_ids=encodings, 
+            input_ids=encodings,
             attention_mask=self.context_masks,
             output_attentions=True,  # Enable attention output
             return_dict=True
         )
         h = deberta_outputs.last_hidden_state
-        
+
         if self.store_attention and deberta_outputs.attentions is not None:
             # Store the attention weights from the last layer
             self.attention_weights['deberta'] = deberta_outputs.attentions[-1]
