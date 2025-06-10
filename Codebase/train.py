@@ -311,18 +311,18 @@ class D2E2S_Trainer(BaseTrainer):
 
         with torch.no_grad():
             model.eval()
-            # Enable attention weight storage
-            model.store_attention_weights(True)
             
+            # Step 1: Enable attention storage before evaluation
+            model.enable_attention_storage()
+            print(f"Enabled attention storage for evaluation epoch {epoch}")
+
             # Iterate batches
             total = math.ceil(dataset.sentence_count / self.args.batch_size)
-            for batch_idx, batch in enumerate(tqdm(
-                data_loader, total=total, desc=f"Evaluate epoch {epoch}"
-            )):
+            for batch_idx, batch in enumerate(tqdm(data_loader, total=total, desc=f"Evaluate epoch {epoch}")):
                 # Move batch to selected device
                 batch = util.to_device(batch, self.args.device)
 
-                # Run model (forward pass)
+                # Step 2: Run forward pass (eval mode)
                 result = model(
                     encodings=batch["encodings"],
                     context_masks=batch["context_masks"],
@@ -335,30 +335,32 @@ class D2E2S_Trainer(BaseTrainer):
                 )
                 entity_clf, senti_clf, rels = result
 
-                # Visualize attention weights periodically
+                # Step 3: Access attention weights and create visualizations periodically
                 if batch_idx % 20 == 0:  # Visualize every 20 batches
-                    tokens = self._tokenizer.convert_ids_to_tokens(
-                        batch["encodings"][0].cpu().numpy()
-                    )
-                    if hasattr(model, "attention_weights"):
-                        # Generate visualizations
-                        model.visualizer.visualize_model_attention(
-                            model.attention_weights.get('deberta'),
-                            model.attention_weights.get('gcn_sem'),
-                            model.attention_weights.get('gcn_syn'),
-                            tokens,
-                            save_prefix=os.path.join(
-                                self._attention_viz_path,
-                                f"epoch{epoch}_batch{batch_idx}"
-                            )
+                    attention_weights = model.get_attention_weights()
+                    if attention_weights:
+                        print(f"Creating visualizations for batch {batch_idx}")
+                        # Get tokens for visualization
+                        tokens = self._tokenizer.convert_ids_to_tokens(
+                            batch["encodings"][0].cpu().numpy()
                         )
+                        
+                        # Step 4: Create and save visualizations
+                        model.visualizer.visualize_model_attention(
+                            attention_weights.get('deberta'),
+                            attention_weights.get('gcn_sem'),
+                            attention_weights.get('gcn_syn'),
+                            tokens,
+                            save_prefix=f"epoch{epoch}_batch{batch_idx}"
+                        )
+                        model.clear_attention_weights()  # Clear for next batch
 
                 # Evaluate batch
                 evaluator.eval_batch(entity_clf, senti_clf, rels, batch)
 
-            # Disable attention weight storage
-            model.store_attention_weights(False)
-            
+            # Disable attention storage after evaluation
+            model.disable_attention_storage()
+
             global_iteration = epoch * updates_epoch + iteration
             ner_eval, senti_eval, senti_nec_eval = evaluator.compute_scores()
             self._log_filter_file(ner_eval, senti_eval, evaluator, epoch)

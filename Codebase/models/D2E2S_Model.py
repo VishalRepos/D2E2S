@@ -3,6 +3,7 @@ import torch
 from trainer import util, sampling
 import os
 import math
+import logging
 from models.Syn_GCN import GCN
 from models.Sem_GCN import SemGCN
 from models.Attention_Module import SelfAttention
@@ -14,6 +15,13 @@ import matplotlib.pyplot as plt
 from models.Channel_Fusion import Orthographic_projection_fusion, TextCentredSP
 from transformers import PreTrainedModel
 from transformers import AutoConfig, AutoModel
+
+# Configure logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 USE_CUDA = torch.cuda.is_available()
 
@@ -46,8 +54,9 @@ class D2E2SModel(PreTrainedModel):
 
         # Add visualizer initialization
         from models.viz_utils import AttentionVisualizer
-
-        self.visualizer = AttentionVisualizer()
+        
+        logger.info("Initializing D2E2SModel")
+        self.visualizer = AttentionVisualizer(save_dir=os.path.join(args.log_path, "attention_viz"))
         self.store_attention = False
         self.attention_weights = {}
 
@@ -161,9 +170,32 @@ class D2E2SModel(PreTrainedModel):
         self.TIN = TIN(self.deberta_feature_dim)
         # self.TextCentredSP = TextCentredSP(self.bert_feature_dim*2, self.shared_dim, self.private_dim)
 
-    def store_attention_weights(self, should_store=True):
-        """Enable or disable storing attention weights during forward pass."""
-        self.store_attention = should_store
+    def enable_attention_storage(self):
+        """Enable storing attention weights during forward pass"""
+        logger.info("Enabling attention weight storage")
+        self.store_attention = True
+        
+    def disable_attention_storage(self):
+        """Disable storing attention weights during forward pass"""
+        logger.info("Disabling attention weight storage")
+        self.store_attention = False
+        
+    def get_attention_weights(self):
+        """Return stored attention weights"""
+        if not self.attention_weights:
+            logger.warning("No attention weights found in model")
+        return self.attention_weights
+        
+    def store_layer_attention(self, layer_name, attention):
+        """Store attention weights from a specific layer"""
+        if self.store_attention:
+            logger.debug(f"Storing attention weights for layer: {layer_name}")
+            logger.debug(f"Attention tensor shape: {attention.shape}")
+            self.attention_weights[layer_name] = attention.detach()
+            
+    def clear_attention_weights(self):
+        """Clear stored attention weights"""
+        logger.info("Clearing stored attention weights")
         self.attention_weights = {}
 
     def _forward_train(
@@ -176,65 +208,95 @@ class D2E2SModel(PreTrainedModel):
         senti_masks: torch.tensor,
         adj,
     ):
-
-        # Parameters init
+        logger.debug("Starting forward train")
         context_masks = context_masks.float()
         self.context_masks = context_masks
         batch_size = encodings.shape[0]
         seq_lens = encodings.shape[1]
+        logger.debug(f"Processing training batch with size: {batch_size}, sequence length: {seq_lens}")
 
-        # encoder layer
-        # h = self.BertAdapterModel(input_ids=encodings, attention_mask=self.context_masks)[0]
-        h = self.deberta(input_ids=encodings, attention_mask=self.context_masks)[0]
+        try:
+            # Get DeBERTa output with attention weights
+            deberta_outputs = self.deberta(
+                input_ids=encodings,
+                attention_mask=self.context_masks,
+                output_attentions=True,
+                return_dict=True
+            )
+            h = deberta_outputs.last_hidden_state
+            
+            if self.store_attention:
+                if deberta_outputs.attentions is not None:
+                    logger.info("Successfully captured DeBERTa training attention weights")
+                    # Store the average attention weights from all layers
+                    all_attentions = torch.stack(deberta_outputs.attentions)
+                    avg_attention = all_attentions.mean(dim=0)
+                    self.attention_weights['deberta'] = avg_attention
+                    logger.debug(f"Training DeBERTa attention shape: {avg_attention.shape}")
+                else:
+                    logger.warning("DeBERTa training attention weights are None")
+        except Exception as e:
+            logger.error(f"Error getting DeBERTa training attention: {str(e)}")
+            raise
+
+        # LSTM and attention processing
         self.output, _ = self.lstm(h, self.hidden)
         self.deberta_lstm_output = self.lstm_dropout(self.output)
         self.deberta_lstm_att_feature = self.deberta_lstm_output
 
-        # attention layers
-        # bert_lstm_feature_attention = self.attention_layer(self.bert_lstm_output, self.bert_lstm_output, self.context_masks[:,:seq_lens])
-        # self.bert_lstm_att_feature = self.bert_lstm_output + bert_lstm_feature_attention
+        try:
+            # GCN layer processing with attention capture
+            h_syn_ori, pool_mask_origin = self.Syn_gcn(adj, h)
+            h_syn_gcn, pool_mask = self.Syn_gcn(adj, self.deberta_lstm_att_feature)
+            h_sem_ori, adj_sem_ori = self.Sem_gcn(h, encodings, seq_lens)
+            h_sem_gcn, adj_sem_gcn = self.Sem_gcn(
+                self.deberta_lstm_att_feature, encodings, seq_lens
+            )
 
-        # gcn layer
-        h_syn_ori, pool_mask_origin = self.Syn_gcn(adj, h)
-        h_syn_gcn, pool_mask = self.Syn_gcn(adj, self.deberta_lstm_att_feature)
-        h_sem_ori, adj_sem_ori = self.Sem_gcn(h, encodings, seq_lens)
-        h_sem_gcn, adj_sem_gcn = self.Sem_gcn(
-            self.deberta_lstm_att_feature, encodings, seq_lens
-        )
+            if self.store_attention:
+                # Store semantic and syntactic GCN attention for training
+                self.attention_weights["gcn_sem"] = adj_sem_gcn
+                self.attention_weights["gcn_syn"] = pool_mask
+                logger.debug(f"Training GCN semantic attention shape: {adj_sem_gcn.shape}")
+                logger.debug(f"Training GCN syntactic attention shape: {pool_mask.shape}")
+        except Exception as e:
+            logger.error(f"Error in training GCN layers: {str(e)}")
+            raise
 
-        # fusion layer
+        # TIN attention and fusion
         h1 = self.TIN(
             h, h_syn_ori, h_syn_gcn, h_sem_ori, h_sem_gcn, adj_sem_ori, adj_sem_gcn
         )
         h = self.attention_layer(h1, h1, self.context_masks[:, :seq_lens]) + h1
-        # h_feature, h_syn_origin, h_syn_feature, h_sem_origin, h_sem_feature = self.TIN(h, h_syn_ori, h_syn_gcn, h_sem_ori, h_sem_gcn)
-        # h = self.TextCentredSP(h_syn_feature, h_sem_feature)
 
         size_embeddings = self.size_embeddings(entity_sizes)
         entity_clf, entity_spans_pool = self._classify_entities(
             encodings, h, entity_masks, size_embeddings, self.args
         )
 
-        # relation_classify
-        h_large = h.unsqueeze(1).repeat(
-            1, max(min(sentiments.shape[1], self._max_pairs), 1), 1, 1
-        )
-        senti_clf = torch.zeros(
-            [batch_size, sentiments.shape[1], self._sentiment_types]
-        ).to(self.senti_classifier.weight.device)
-
-        # obtain sentiment logits
-        # chunk processing to reduce memory usage
-        for i in range(0, sentiments.shape[1], self._max_pairs):
-            # classify sentiment candidates
-            chunk_senti_logits = self._classify_sentiments(
-                entity_spans_pool, size_embeddings, sentiments, senti_masks, h_large, i
+        try:
+            # Relation classification
+            h_large = h.unsqueeze(1).repeat(
+                1, max(min(sentiments.shape[1], self._max_pairs), 1), 1, 1
             )
-            senti_clf[:, i : i + self._max_pairs, :] = chunk_senti_logits
+            senti_clf = torch.zeros(
+                [batch_size, sentiments.shape[1], self._sentiment_types]
+            ).to(self.senti_classifier.weight.device)
 
-        batch_loss = compute_loss(adj_sem_ori, adj_sem_gcn, adj)
+            # Chunk processing for sentiment classification
+            for i in range(0, sentiments.shape[1], self._max_pairs):
+                chunk_senti_logits = self._classify_sentiments(
+                    entity_spans_pool, size_embeddings, sentiments, senti_masks, h_large, i
+                )
+                senti_clf[:, i : i + self._max_pairs, :] = chunk_senti_logits
 
-        return entity_clf, senti_clf, batch_loss
+            batch_loss = compute_loss(adj_sem_ori, adj_sem_gcn, adj)
+            logger.debug("Successfully completed forward training pass")
+            return entity_clf, senti_clf, batch_loss
+
+        except Exception as e:
+            logger.error(f"Error in training sentiment classification: {str(e)}")
+            raise
 
     def _forward_eval(
         self,
@@ -247,59 +309,74 @@ class D2E2SModel(PreTrainedModel):
         adj,
         evaluate=True,
     ):
+        logger.debug("Starting forward_eval")
         context_masks = context_masks.float()
         self.context_masks = context_masks
         batch_size = encodings.shape[0]
         seq_lens = encodings.shape[1]
+        logger.debug(f"Processing batch with size: {batch_size}, sequence length: {seq_lens}")
 
         # Get DeBERTa output with attention weights
-        deberta_outputs = self.deberta(
-            input_ids=encodings,
-            attention_mask=self.context_masks,
-            output_attentions=True,  # Enable attention output
-            return_dict=True
-        )
-        h = deberta_outputs.last_hidden_state
-
-        if self.store_attention and deberta_outputs.attentions is not None:
-            # Store the attention weights from the last layer
-            self.attention_weights['deberta'] = deberta_outputs.attentions[-1]
+        try:
+            deberta_outputs = self.deberta(
+                input_ids=encodings,
+                attention_mask=self.context_masks,
+                output_attentions=True,  # Enable attention output
+                return_dict=True
+            )
+            h = deberta_outputs.last_hidden_state
+            
+            if self.store_attention:
+                if deberta_outputs.attentions is not None:
+                    logger.info("Successfully captured DeBERTa attention weights")
+                    # Store the average attention weights from all layers
+                    all_attentions = torch.stack(deberta_outputs.attentions)
+                    avg_attention = all_attentions.mean(dim=0)  # Average across layers
+                    self.attention_weights['deberta'] = avg_attention
+                    logger.debug(f"DeBERTa attention shape: {avg_attention.shape}")
+                else:
+                    logger.warning("DeBERTa attention weights are None")
+        except Exception as e:
+            logger.error(f"Error getting DeBERTa attention: {str(e)}")
+            raise
 
         # LSTM and attention
         self.output, _ = self.lstm(h, self.hidden)
         self.deberta_lstm_output = self.lstm_dropout(self.output)
         self.deberta_lstm_att_feature = self.deberta_lstm_output
 
-        # GCN layers with attention capture
-        h_syn_ori, pool_mask_origin = self.Syn_gcn(adj, h)
-        h_syn_gcn, pool_mask = self.Syn_gcn(adj, self.deberta_lstm_att_feature)
-        h_sem_ori, adj_sem_ori = self.Sem_gcn(h, encodings, seq_lens)
-        h_sem_gcn, adj_sem_gcn = self.Sem_gcn(
-            self.deberta_lstm_att_feature, encodings, seq_lens
-        )
-
-        if self.store_attention:
-            # Store semantic and syntactic GCN attention
-            self.attention_weights["gcn_sem"] = adj_sem_gcn
-            self.attention_weights["gcn_syn"] = pool_mask
+        try:
+            # GCN layers with attention capture
+            h_syn_ori, pool_mask_origin = self.Syn_gcn(adj, h)
+            h_syn_gcn, pool_mask = self.Syn_gcn(adj, self.deberta_lstm_att_feature)
+            h_sem_ori, adj_sem_ori = self.Sem_gcn(h, encodings, seq_lens)
+            h_sem_gcn, adj_sem_gcn = self.Sem_gcn(
+                self.deberta_lstm_att_feature, encodings, seq_lens
+            )
+            
+            if self.store_attention:
+                # Store semantic and syntactic GCN attention
+                self.attention_weights["gcn_sem"] = adj_sem_gcn
+                self.attention_weights["gcn_syn"] = pool_mask
+                logger.debug(f"GCN semantic attention shape: {adj_sem_gcn.shape}")
+                logger.debug(f"GCN syntactic attention shape: {pool_mask.shape}")
+        except Exception as e:
+            logger.error(f"Error in GCN layers: {str(e)}")
+            raise
 
         # TIN attention and fusion
         h1 = self.TIN(
             h, h_syn_ori, h_syn_gcn, h_sem_ori, h_sem_gcn, adj_sem_ori, adj_sem_gcn
         )
         h = self.attention_layer(h1, h1, self.context_masks[:, :seq_lens]) + h1
-        # h_feature, h_syn_origin, h_syn_feature, h_sem_origin, h_sem_feature = self.TIN(h, h_syn_ori, h_syn_gcn, h_sem_ori, h_sem_gcn)
-        # h = self.TextCentredSP(h_syn_feature, h_sem_feature)
 
         # entity_classify
-        size_embeddings = self.size_embeddings(
-            entity_sizes
-        )  # embed entity candidate sizes
+        size_embeddings = self.size_embeddings(entity_sizes)
         entity_clf, entity_spans_pool = self._classify_entities(
             encodings, h, entity_masks, size_embeddings, self.args
         )
 
-        # ignore entity candidates that do not constitute an actual entity for sentiments (based on classifier)
+        # Process relations
         ctx_size = context_masks.shape[-1]
         sentiments, senti_masks, senti_sample_masks = self._filter_spans(
             entity_clf, entity_spans, entity_sample_masks, ctx_size
@@ -308,27 +385,29 @@ class D2E2SModel(PreTrainedModel):
         h_large = h.unsqueeze(1).repeat(
             1, max(min(sentiments.shape[1], self._max_pairs), 1), 1, 1
         )
-        senti_clf = torch.zeros(
-            [batch_size, sentiments.shape[1], self._sentiment_types]
-        ).to(self.senti_classifier.weight.device)
+        
+        try:
+            senti_clf = torch.zeros(
+                [batch_size, sentiments.shape[1], self._sentiment_types]
+            ).to(self.senti_classifier.weight.device)
 
-        # obtain sentiment logits
-        # chunk processing to reduce memory usage
-        for i in range(0, sentiments.shape[1], self._max_pairs):
-            # classify sentiment candidates
-            chunk_senti_logits = self._classify_sentiments(
-                entity_spans_pool, size_embeddings, sentiments, senti_masks, h_large, i
-            )
-            # apply sigmoid
-            chunk_senti_clf = torch.sigmoid(chunk_senti_logits)
-            senti_clf[:, i : i + self._max_pairs, :] = chunk_senti_clf
+            # Chunk processing for sentiment classification
+            for i in range(0, sentiments.shape[1], self._max_pairs):
+                chunk_senti_logits = self._classify_sentiments(
+                    entity_spans_pool, size_embeddings, sentiments, senti_masks, h_large, i
+                )
+                chunk_senti_clf = torch.sigmoid(chunk_senti_logits)
+                senti_clf[:, i : i + self._max_pairs, :] = chunk_senti_clf
 
-        senti_clf = senti_clf * senti_sample_masks  # mask
-
-        # apply softmax
-        entity_clf = torch.softmax(entity_clf, dim=2)
-
-        return entity_clf, senti_clf, sentiments
+            senti_clf = senti_clf * senti_sample_masks  # mask
+            entity_clf = torch.softmax(entity_clf, dim=2)
+            
+            logger.debug("Successfully completed forward evaluation")
+            return entity_clf, senti_clf, sentiments
+            
+        except Exception as e:
+            logger.error(f"Error in sentiment classification: {str(e)}")
+            raise
 
     def _classify_entities(self, encodings, h, entity_masks, size_embeddings, args):
         # entity_masks: tensor(4,132,24) 4:batch_size, 132: entities count, 24: one sentence token count and one entity need 24 mask
