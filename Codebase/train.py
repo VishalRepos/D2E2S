@@ -182,7 +182,7 @@ class D2E2S_Trainer(BaseTrainer):
             # Enable attention visualization periodically (every 50 batches)
             visualize_attention = batch_idx % 50 == 0
             if visualize_attention:
-                model.store_attention_weights(True)
+                model.enable_attention_storage()
 
             # Forward step
             entity_logits, senti_logits, batch_loss = model(
