@@ -208,37 +208,125 @@ class AttentionVisualizer:
             # Create directory if it doesn't exist
             os.makedirs(self.save_dir, exist_ok=True)
             logger.info(f"Saving visualizations to: {self.save_dir}")
+
+            # Use higher DPI and SVG format for better quality
+            plt.rcParams['figure.dpi'] = 300
+            plt.rcParams['svg.fonttype'] = 'none'  # This ensures text remains as text in SVG
             
             if deberta_attn is not None:
                 try:
                     fig = self.plot_attention_weights(deberta_attn, tokens, "DeBERTa Attention")
-                    save_path = os.path.join(self.save_dir, f"{save_prefix}_deberta_attn.png")
-                    fig.savefig(save_path)
+                    save_path = os.path.join(self.save_dir, f"{save_prefix}_deberta_attn.svg")
+                    fig.savefig(save_path, format='svg', bbox_inches='tight')
                     plt.close(fig)
                     logger.info(f"Saved DeBERTa attention visualization to {save_path}")
+                    
+                    # Also save as HTML file for easier viewing
+                    html_path = os.path.join(self.save_dir, f"{save_prefix}_deberta_attn.html")
+                    self._save_attention_html(deberta_attn, tokens, "DeBERTa Attention", html_path)
                 except Exception as e:
                     logger.warning(f"Could not visualize DeBERTa attention: {str(e)}")
             
             if sem_gcn_attn is not None:
                 try:
                     fig = self.plot_attention_weights(sem_gcn_attn, tokens, "Semantic GCN Attention")
-                    save_path = os.path.join(self.save_dir, f"{save_prefix}_sem_gcn_attn.png")
-                    fig.savefig(save_path)
+                    save_path = os.path.join(self.save_dir, f"{save_prefix}_sem_gcn_attn.svg")
+                    fig.savefig(save_path, format='svg', bbox_inches='tight')
                     plt.close(fig)
                     logger.info(f"Saved Semantic GCN attention visualization to {save_path}")
+                    
+                    # Also save as HTML file
+                    html_path = os.path.join(self.save_dir, f"{save_prefix}_sem_gcn_attn.html")
+                    self._save_attention_html(sem_gcn_attn, tokens, "Semantic GCN Attention", html_path)
                 except Exception as e:
                     logger.warning(f"Could not visualize Semantic GCN attention: {str(e)}")
             
             if syn_gcn_attn is not None:
                 try:
                     fig = self.plot_attention_weights(syn_gcn_attn, tokens, "Syntactic GCN Attention")
-                    save_path = os.path.join(self.save_dir, f"{save_prefix}_syn_gcn_attn.png")
-                    fig.savefig(save_path)
+                    save_path = os.path.join(self.save_dir, f"{save_prefix}_syn_gcn_attn.svg")
+                    fig.savefig(save_path, format='svg', bbox_inches='tight')
                     plt.close(fig)
                     logger.info(f"Saved Syntactic GCN attention visualization to {save_path}")
+                    
+                    # Also save as HTML file
+                    html_path = os.path.join(self.save_dir, f"{save_prefix}_syn_gcn_attn.html")
+                    self._save_attention_html(syn_gcn_attn, tokens, "Syntactic GCN Attention", html_path)
                 except Exception as e:
                     logger.warning(f"Could not visualize Syntactic GCN attention: {str(e)}")
         
         except Exception as e:
             logger.error(f"Error in visualize_model_attention: {str(e)}")
+            raise
+    
+    def _save_attention_html(self, attention_weights, tokens, title, save_path):
+        """Save attention weights as an interactive HTML heatmap."""
+        try:
+            # Convert attention weights to 2D if needed
+            if len(attention_weights.shape) > 2:
+                if len(attention_weights.shape) == 3:
+                    attention_weights = attention_weights.mean(axis=0)
+                elif len(attention_weights.shape) == 4:
+                    attention_weights = attention_weights[0].mean(axis=0)
+            
+            # Convert to numpy if needed
+            if not isinstance(attention_weights, np.ndarray):
+                attention_weights = np.array(attention_weights)
+            
+            # Create HTML content
+            html_content = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>{title}</title>
+                <style>
+                    .attention-heatmap {{
+                        border-collapse: collapse;
+                        margin: 20px;
+                    }}
+                    .attention-heatmap td {{
+                        width: 30px;
+                        height: 30px;
+                        text-align: center;
+                        padding: 5px;
+                    }}
+                    .token-label {{
+                        font-weight: bold;
+                        padding: 5px;
+                    }}
+                </style>
+            </head>
+            <body>
+                <h2>{title}</h2>
+                <table class="attention-heatmap">
+                    <tr>
+                        <td></td>
+                        {''.join(f'<td class="token-label">{t}</td>' for t in tokens)}
+                    </tr>
+            """
+            
+            # Add attention values
+            for i, token_row in enumerate(tokens):
+                html_content += f'<tr><td class="token-label">{token_row}</td>'
+                for j in range(attention_weights.shape[1]):
+                    value = attention_weights[i, j]
+                    # Convert value to RGB color (red intensity)
+                    color = f"rgb(255, {int(255 * (1 - value))}, {int(255 * (1 - value))})"
+                    html_content += f'<td style="background-color: {color}">{value:.2f}</td>'
+                html_content += '</tr>'
+            
+            html_content += """
+                </table>
+            </body>
+            </html>
+            """
+            
+            # Save HTML file
+            with open(save_path, 'w', encoding='utf-8') as f:
+                f.write(html_content)
+            
+            logger.info(f"Saved HTML visualization to {save_path}")
+            
+        except Exception as e:
+            logger.error(f"Error saving HTML visualization: {str(e)}")
             raise
