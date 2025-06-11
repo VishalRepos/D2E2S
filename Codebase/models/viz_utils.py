@@ -21,34 +21,56 @@ class AttentionVisualizer:
         
     def plot_attention_weights(self, attention_weights, tokens, title="Attention Weights"):
         """Plot attention weights as a heatmap."""
-        logger.debug(f"Plotting attention weights with shape: {attention_weights.shape if hasattr(attention_weights, 'shape') else 'None'}")
-        logger.debug(f"Number of tokens: {len(tokens)}")
-        
-        if attention_weights is None:
-            logger.error("Received None attention weights")
-            raise ValueError("Cannot plot None attention weights")
+        try:
+            logger.debug(f"Original attention weights shape: {attention_weights.shape if hasattr(attention_weights, 'shape') else 'None'}")
             
-        if not isinstance(attention_weights, np.ndarray):
-            logger.debug("Converting attention weights to numpy array")
-            attention_weights = np.array(attention_weights)
+            if attention_weights is None:
+                logger.error("Received None attention weights")
+                raise ValueError("Cannot plot None attention weights")
+                
+            # Convert to numpy if needed
+            if not isinstance(attention_weights, np.ndarray):
+                logger.debug("Converting attention weights to numpy array")
+                attention_weights = np.array(attention_weights)
             
-        logger.debug(f"Attention weights statistics: min={attention_weights.min():.4f}, max={attention_weights.max():.4f}, mean={attention_weights.mean():.4f}")
+            # Handle multi-dimensional attention tensors
+            if len(attention_weights.shape) > 2:
+                logger.info(f"Reducing {len(attention_weights.shape)}D attention tensor to 2D")
+                if len(attention_weights.shape) == 3:
+                    # For 3D tensor (e.g., batch x seq_len x seq_len)
+                    # Take the first item if it's batch dimension
+                    if attention_weights.shape[0] < attention_weights.shape[1]:
+                        attention_weights = attention_weights[0]
+                    # Or average across heads if it's multi-head attention
+                    else:
+                        attention_weights = attention_weights.mean(axis=0)
+                elif len(attention_weights.shape) == 4:
+                    # For 4D tensor (e.g., batch x heads x seq_len x seq_len)
+                    # Take first batch and average across heads
+                    attention_weights = attention_weights[0].mean(axis=0)
             
-        plt.figure(figsize=(10, 8))
-        sns.heatmap(
-            attention_weights,
-            xticklabels=tokens,
-            yticklabels=tokens,
-            cmap='YlOrRd',
-            annot=True if len(tokens) < 20 else False
-        )
-        plt.title(title)
-        plt.xlabel("Target Tokens")
-        plt.ylabel("Source Tokens")
-        plt.tight_layout()
-        
-        logger.debug(f"Successfully created attention heatmap for: {title}")
-        return plt.gcf()
+            logger.debug(f"Processed attention weights shape: {attention_weights.shape}")
+            logger.debug(f"Attention weights statistics: min={attention_weights.min():.4f}, max={attention_weights.max():.4f}, mean={attention_weights.mean():.4f}")
+                
+            plt.figure(figsize=(10, 8))
+            sns.heatmap(
+                attention_weights,
+                xticklabels=tokens,
+                yticklabels=tokens,
+                cmap='YlOrRd',
+                annot=True if len(tokens) < 20 else False
+            )
+            plt.title(title)
+            plt.xlabel("Target Tokens")
+            plt.ylabel("Source Tokens")
+            plt.tight_layout()
+            
+            logger.debug(f"Successfully created attention heatmap for: {title}")
+            return plt.gcf()
+            
+        except Exception as e:
+            logger.error(f"Error plotting attention weights: {str(e)}")
+            raise
         
     def plot_all_heads(self, attention_heads, tokens, layer_name=""):
         """Plot attention weights for all heads in a layer."""
@@ -179,3 +201,44 @@ class AttentionVisualizer:
                 raise
         
         logger.info("Completed model attention visualization")
+        
+    def visualize_model_attention(self, deberta_attn, sem_gcn_attn, syn_gcn_attn, tokens, save_prefix):
+        """Visualize different types of attention patterns from the model."""
+        try:
+            # Create directory if it doesn't exist
+            os.makedirs(self.save_dir, exist_ok=True)
+            logger.info(f"Saving visualizations to: {self.save_dir}")
+            
+            if deberta_attn is not None:
+                try:
+                    fig = self.plot_attention_weights(deberta_attn, tokens, "DeBERTa Attention")
+                    save_path = os.path.join(self.save_dir, f"{save_prefix}_deberta_attn.png")
+                    fig.savefig(save_path)
+                    plt.close(fig)
+                    logger.info(f"Saved DeBERTa attention visualization to {save_path}")
+                except Exception as e:
+                    logger.warning(f"Could not visualize DeBERTa attention: {str(e)}")
+            
+            if sem_gcn_attn is not None:
+                try:
+                    fig = self.plot_attention_weights(sem_gcn_attn, tokens, "Semantic GCN Attention")
+                    save_path = os.path.join(self.save_dir, f"{save_prefix}_sem_gcn_attn.png")
+                    fig.savefig(save_path)
+                    plt.close(fig)
+                    logger.info(f"Saved Semantic GCN attention visualization to {save_path}")
+                except Exception as e:
+                    logger.warning(f"Could not visualize Semantic GCN attention: {str(e)}")
+            
+            if syn_gcn_attn is not None:
+                try:
+                    fig = self.plot_attention_weights(syn_gcn_attn, tokens, "Syntactic GCN Attention")
+                    save_path = os.path.join(self.save_dir, f"{save_prefix}_syn_gcn_attn.png")
+                    fig.savefig(save_path)
+                    plt.close(fig)
+                    logger.info(f"Saved Syntactic GCN attention visualization to {save_path}")
+                except Exception as e:
+                    logger.warning(f"Could not visualize Syntactic GCN attention: {str(e)}")
+        
+        except Exception as e:
+            logger.error(f"Error in visualize_model_attention: {str(e)}")
+            raise
