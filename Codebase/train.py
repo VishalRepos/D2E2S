@@ -11,6 +11,9 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import AdamW
 from transformers import AutoTokenizer, AutoConfig
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
 
 from Parameter import train_argparser
 from models.D2E2S_Model import D2E2SModel
@@ -36,12 +39,49 @@ class D2E2S_Trainer(BaseTrainer):
         self._examples_path = os.path.join(
             self._log_path_predict, "sample_%s_%s_epoch_%s.html"
         )
+        
+        # Create image directory for attention heatmaps
+        self._image_path = os.path.join("image", self.args.dataset)
+        # Delete existing attention heatmaps if they exist
+        if os.path.exists(self._image_path):
+            for file in os.listdir(self._image_path):
+                if file.startswith("attention_"):
+                    os.remove(os.path.join(self._image_path, file))
+        os.makedirs(self._image_path, exist_ok=True)
+        self._attention_path = os.path.join(
+            self._image_path, "attention_%s_epoch_%s.png"
+        )
+        
         os.makedirs(self._log_path_result)
         os.makedirs(self._log_path_predict)
         self.max_pair_f1 = 40
         self.result_path = os.path.join(
             self._log_path_result, "result{}.txt".format(self.args.max_span_size)
         )
+
+    def visualize_attention(self, attention_weights, tokens, epoch, batch_idx, attention_type):
+        """Visualize attention weights as a heatmap"""
+        plt.figure(figsize=(10, 8))
+        
+        # Convert attention weights to numpy array
+        if isinstance(attention_weights, torch.Tensor):
+            attention_weights = attention_weights.detach().cpu().numpy()
+        
+        # Create heatmap
+        sns.heatmap(attention_weights, 
+                   xticklabels=tokens,
+                   yticklabels=tokens,
+                   cmap='viridis')
+        
+        plt.title(f'{attention_type} Attention Heatmap - Epoch {epoch} Batch {batch_idx}')
+        plt.xticks(rotation=45, ha='right')
+        plt.yticks(rotation=0)
+        plt.tight_layout()
+        
+        # Save the plot
+        save_path = self._attention_path % (attention_type.lower(), epoch)
+        plt.savefig(save_path)
+        plt.close()
 
     def _preprocess(self, args, input_reader_cls, types_path, train_path, test_path):
 
@@ -167,6 +207,24 @@ class D2E2S_Trainer(BaseTrainer):
             model.train()
             batch = util.to_device(batch, arg_parser.device)
 
+            # Get DeBERTa attention weights first
+            with torch.no_grad():
+                deberta_outputs = model.deberta(
+                    input_ids=batch["encodings"],
+                    attention_mask=batch["context_masks"],
+                    output_attentions=True
+                )
+                if hasattr(deberta_outputs, 'attentions') and deberta_outputs.attentions:
+                    last_layer_attention = deberta_outputs.attentions[-1]
+                    tokens = self._tokenizer.convert_ids_to_tokens(batch["encodings"][0])
+                    self.visualize_attention(
+                        last_layer_attention[0, 0],  # First head of first item in batch
+                        tokens,
+                        epoch,
+                        iteration,
+                        "DeBERTa"
+                    )
+
             # forward step
             entity_logits, senti_logits, batch_loss = model(
                 encodings=batch["encodings"],
@@ -177,6 +235,18 @@ class D2E2S_Trainer(BaseTrainer):
                 senti_masks=batch["senti_masks"],
                 adj=batch["adj"],
             )
+
+            # Get self-attention weights after forward pass
+            if hasattr(model, 'attention_layer') and hasattr(model.attention_layer, 'attn'):
+                self_attention_weights = model.attention_layer.attn
+                tokens = self._tokenizer.convert_ids_to_tokens(batch["encodings"][0])
+                self.visualize_attention(
+                    self_attention_weights[0],  # First head
+                    tokens,
+                    epoch,
+                    iteration,
+                    "Self"
+                )
 
             # compute loss and optimize parameters
             epoch_loss = compute_loss.compute(
@@ -267,11 +337,28 @@ class D2E2S_Trainer(BaseTrainer):
             model.eval()
             # iterate batches
             total = math.ceil(dataset.sentence_count / self.args.batch_size)
-            for batch in tqdm(
+            for batch_idx, batch in enumerate(tqdm(
                 data_loader, total=total, desc="Evaluate epoch %s" % epoch
-            ):
+            )):
                 # move batch to selected device
                 batch = util.to_device(batch, self.args.device)
+
+                # Get DeBERTa attention weights first
+                deberta_outputs = model.deberta(
+                    input_ids=batch["encodings"],
+                    attention_mask=batch["context_masks"],
+                    output_attentions=True
+                )
+                if hasattr(deberta_outputs, 'attentions') and deberta_outputs.attentions:
+                    last_layer_attention = deberta_outputs.attentions[-1]
+                    tokens = self._tokenizer.convert_ids_to_tokens(batch["encodings"][0])
+                    self.visualize_attention(
+                        last_layer_attention[0, 0],  # First head of first item in batch
+                        tokens,
+                        epoch,
+                        batch_idx,
+                        "DeBERTa_Eval"
+                    )
 
                 # run model (forward pass)
                 result = model(
@@ -285,11 +372,23 @@ class D2E2S_Trainer(BaseTrainer):
                     adj=batch["adj"],
                 )
                 entity_clf, senti_clf, rels = result
-                # evaluate batch, entity:tensor(16, 188, 3), senti_clf:tensor(16, 2, 4), rels:tensor(16, 2, 2)
+
+                # Get self-attention weights after forward pass
+                if hasattr(model, 'attention_layer') and hasattr(model.attention_layer, 'attn'):
+                    self_attention_weights = model.attention_layer.attn
+                    tokens = self._tokenizer.convert_ids_to_tokens(batch["encodings"][0])
+                    self.visualize_attention(
+                        self_attention_weights[0],  # First head
+                        tokens,
+                        epoch,
+                        batch_idx,
+                        "Self_Eval"
+                    )
+
+                # evaluate batch
                 evaluator.eval_batch(entity_clf, senti_clf, rels, batch)
             global_iteration = epoch * updates_epoch + iteration
             ner_eval, senti_eval, senti_nec_eval = evaluator.compute_scores()
-            # print(self.result_path)
             self._log_filter_file(ner_eval, senti_eval, evaluator, epoch)
         self._log_eval(
             *ner_eval,
