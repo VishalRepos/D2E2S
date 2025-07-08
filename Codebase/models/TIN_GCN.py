@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch_geometric.data import Data
-from torch_geometric.nn import GCNConv, GCN2Conv, TAGConv, ChebConv, GatedGraphConv, ResGatedGraphConv
+from torch_geometric.nn import GCNConv, GCN2Conv, TAGConv, ChebConv, ResGatedGraphConv, GATv2Conv
 from torch_geometric.utils import dense_to_sparse
 
 class TIN(nn.Module):
@@ -88,9 +88,9 @@ class GatedGCN(torch.nn.Module):
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
         self.gated_layers = gated_layers
-        self.conv1 = GCNConv(self.input_dim, self.hidden_dim)                                                           # GCNConv默认添加add_self_loops
-        self.conv2 = GCNConv(self.input_dim, self.hidden_dim)
-        self.conv3 = GatedGraphConv(self.hidden_dim, self.gated_layers)
+        self.conv1 = GATv2Conv(self.input_dim, self.hidden_dim, heads=4, concat=True)
+        self.conv2 = GATv2Conv(self.input_dim, self.hidden_dim, heads=4, concat=True)
+        self.conv3 = GATv2Conv(self.hidden_dim * 4, self.hidden_dim, heads=4, concat=True)
 
     def forward(self, input1, input2, adj_sem_ori, adj_sem_gcn):
         # Build graph data structures
@@ -101,13 +101,12 @@ class GatedGCN(torch.nn.Module):
         data.cuda()
         data.x = data.x.view(-1, self.input_dim)
         data.edge_index, _ = dense_to_sparse(torch.ones((input1.size(1), input1.size(1))).cuda())
-        data.edge_attr = compute_cosine_similarity(data.x, data.edge_index)
-        x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
+        x, edge_index = data.x, data.edge_index
 
-        x = F.relu(self.conv1(x, edge_index, edge_attr))
+        x = F.elu(self.conv1(x, edge_index))
         x = Multi_Head_S_Pool(x, adj_sem_ori, adj_sem_gcn)
-        # x = F.relu(self.conv2(x, edge_index, edge_attr))
-        x = F.relu(self.conv3(x, edge_index))
+        # x = F.elu(self.conv2(x, edge_index))
+        x = F.elu(self.conv3(x, edge_index))
         h_fusion_1, h_fusion_2 = x.view(2, 16, -1, 768)[0], x.view(2, 16, -1, 768)[1]
         return h_fusion_1, h_fusion_2
 
