@@ -39,6 +39,7 @@ class D2E2S_Trainer(BaseTrainer):
         os.makedirs(self._log_path_result)
         os.makedirs(self._log_path_predict)
         self.max_pair_f1 = 40
+        self.best_epoch = -1
         self.result_path = os.path.join(
             self._log_path_result, "result{}.txt".format(self.args.max_span_size)
         )
@@ -333,6 +334,7 @@ class D2E2S_Trainer(BaseTrainer):
             for inx, val in enumerate(senti_eval):
                 senti_dic[columns[inx]] = val
             self.max_pair_f1 = f1
+            self.best_epoch = epoch
             with open(self.result_path, mode="a", encoding="utf-8") as f:
                 w_str = "No. {} ：....\n".format(epoch)
                 f.write(w_str)
@@ -384,3 +386,7 @@ if __name__ == "__main__":
         types_path=arg_parser.dataset_file["types_path"],
         input_reader_cls=JsonInputReader,
     )
+    # Print the best F1 score and epoch after training
+    print(f"\nBest F1 score: {trainer.max_pair_f1} at epoch {trainer.best_epoch}\n")
+
+
