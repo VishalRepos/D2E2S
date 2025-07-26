@@ -307,6 +307,211 @@ python train.py --dataset 14res --syn_gcn_type dynamic --sem_gcn_type dynamic
 python train.py --dataset 14res --syn_gcn_type sage --sem_gcn_type sage --gcn_heads 4
 ```
 
+## 🚀 **Complete Run Commands**
+
+### **Quick Start Commands**
+
+#### **1. Basic GATv2Conv (Start Here - Like TIN Upgrade)**
+```bash
+# Single command to run with GATv2Conv
+python train.py --dataset 14res --syn_gcn_type gatv2 --sem_gcn_type gatv2 --gcn_heads 8 --gcn_layers 2 --batch_size 16 --epochs 120 --lr 5e-5
+```
+
+#### **2. Hybrid Approach (Best Performance)**
+```bash
+# Hybrid GCN for maximum performance
+python train.py --dataset 14res --syn_gcn_type hybrid --sem_gcn_type hybrid --gcn_layers 3 --gcn_heads 12 --batch_size 16 --epochs 120 --lr 5e-5
+```
+
+#### **3. Dynamic GCN (Adaptive Learning)**
+```bash
+# Dynamic edge weight learning
+python train.py --dataset 14res --syn_gcn_type dynamic --sem_gcn_type dynamic --gcn_layers 2 --batch_size 16 --epochs 120 --lr 5e-5
+```
+
+### **Advanced Configuration Commands**
+
+#### **4. GIN (Graph Isomorphism Network)**
+```bash
+# GIN for better graph representations
+python train.py --dataset 14res --syn_gcn_type gin --sem_gcn_type gin --gcn_layers 3 --batch_size 16 --epochs 120 --lr 5e-5
+```
+
+#### **5. GraphSAGE (Large Graphs)**
+```bash
+# GraphSAGE for inductive learning
+python train.py --dataset 14res --syn_gcn_type sage --sem_gcn_type sage --gcn_heads 4 --batch_size 16 --epochs 120 --lr 5e-5
+```
+
+#### **6. EdgeConv (Edge-Aware)**
+```bash
+# Edge-aware convolution
+python train.py --dataset 14res --syn_gcn_type edge_conv --sem_gcn_type edge_conv --gcn_layers 2 --batch_size 16 --epochs 120 --lr 5e-5
+```
+
+#### **7. Chebyshev GCN (Spectral)**
+```bash
+# Chebyshev polynomial approximation
+python train.py --dataset 14res --syn_gcn_type chebyshev --sem_gcn_type chebyshev --gcn_layers 2 --batch_size 16 --epochs 120 --lr 5e-5
+```
+
+### **Multi-Dataset Commands**
+
+#### **8. All Datasets with GATv2Conv**
+```bash
+# 14res dataset
+python train.py --dataset 14res --syn_gcn_type gatv2 --sem_gcn_type gatv2 --gcn_heads 8 --gcn_layers 2 --batch_size 16 --epochs 120 --lr 5e-5
+
+# 15res dataset
+python train.py --dataset 15res --syn_gcn_type gatv2 --sem_gcn_type gatv2 --gcn_heads 8 --gcn_layers 2 --batch_size 16 --epochs 120 --lr 5e-5
+
+# 16res dataset
+python train.py --dataset 16res --syn_gcn_type gatv2 --sem_gcn_type gatv2 --gcn_heads 8 --gcn_layers 2 --batch_size 16 --epochs 120 --lr 5e-5
+
+# 14lap dataset
+python train.py --dataset 14lap --syn_gcn_type gatv2 --sem_gcn_type gatv2 --gcn_heads 8 --gcn_layers 2 --batch_size 16 --epochs 120 --lr 5e-5
+```
+
+#### **9. All Datasets with Hybrid Approach**
+```bash
+# 14res dataset
+python train.py --dataset 14res --syn_gcn_type hybrid --sem_gcn_type hybrid --gcn_layers 3 --gcn_heads 12 --batch_size 16 --epochs 120 --lr 5e-5
+
+# 15res dataset
+python train.py --dataset 15res --syn_gcn_type hybrid --sem_gcn_type hybrid --gcn_layers 3 --gcn_heads 12 --batch_size 16 --epochs 120 --lr 5e-5
+
+# 16res dataset
+python train.py --dataset 16res --syn_gcn_type hybrid --sem_gcn_type hybrid --gcn_layers 3 --gcn_heads 12 --batch_size 16 --epochs 120 --lr 5e-5
+
+# 14lap dataset
+python train.py --dataset 14lap --syn_gcn_type hybrid --sem_gcn_type hybrid --gcn_layers 3 --gcn_heads 12 --batch_size 16 --epochs 120 --lr 5e-5
+```
+
+### **Performance Testing Commands**
+
+#### **10. Memory-Efficient Settings**
+```bash
+# Reduced memory usage
+python train.py --dataset 14res --syn_gcn_type gatv2 --sem_gcn_type gatv2 --gcn_heads 4 --gcn_layers 2 --batch_size 8 --epochs 120 --lr 5e-5
+```
+
+#### **11. Fast Training Settings**
+```bash
+# Faster training with fewer epochs
+python train.py --dataset 14res --syn_gcn_type sage --sem_gcn_type sage --gcn_heads 4 --gcn_layers 2 --batch_size 32 --epochs 60 --lr 1e-4
+```
+
+#### **12. High-Performance Settings**
+```bash
+# Maximum performance with more resources
+python train.py --dataset 14res --syn_gcn_type hybrid --sem_gcn_type hybrid --gcn_layers 4 --gcn_heads 16 --batch_size 8 --epochs 150 --lr 3e-5
+```
+
+### **Comparison Commands**
+
+#### **13. Baseline vs Advanced Comparison**
+```bash
+# Baseline (original GCN)
+python train.py --dataset 14res --batch_size 16 --epochs 120 --lr 5e-5
+
+# Advanced GATv2Conv
+python train.py --dataset 14res --syn_gcn_type gatv2 --sem_gcn_type gatv2 --gcn_heads 8 --gcn_layers 2 --batch_size 16 --epochs 120 --lr 5e-5
+
+# Advanced Hybrid
+python train.py --dataset 14res --syn_gcn_type hybrid --sem_gcn_type hybrid --gcn_layers 3 --gcn_heads 12 --batch_size 16 --epochs 120 --lr 5e-5
+```
+
+### **Parameter Tuning Commands**
+
+#### **14. Different Attention Heads**
+```bash
+# 4 heads
+python train.py --dataset 14res --syn_gcn_type gatv2 --sem_gcn_type gatv2 --gcn_heads 4 --gcn_layers 2 --batch_size 16 --epochs 120 --lr 5e-5
+
+# 8 heads (default)
+python train.py --dataset 14res --syn_gcn_type gatv2 --sem_gcn_type gatv2 --gcn_heads 8 --gcn_layers 2 --batch_size 16 --epochs 120 --lr 5e-5
+
+# 12 heads
+python train.py --dataset 14res --syn_gcn_type gatv2 --sem_gcn_type gatv2 --gcn_heads 12 --gcn_layers 2 --batch_size 16 --epochs 120 --lr 5e-5
+
+# 16 heads
+python train.py --dataset 14res --syn_gcn_type gatv2 --sem_gcn_type gatv2 --gcn_heads 16 --gcn_layers 2 --batch_size 16 --epochs 120 --lr 5e-5
+```
+
+#### **15. Different Layer Counts**
+```bash
+# 2 layers (default)
+python train.py --dataset 14res --syn_gcn_type gatv2 --sem_gcn_type gatv2 --gcn_heads 8 --gcn_layers 2 --batch_size 16 --epochs 120 --lr 5e-5
+
+# 3 layers
+python train.py --dataset 14res --syn_gcn_type gatv2 --sem_gcn_type gatv2 --gcn_heads 8 --gcn_layers 3 --batch_size 16 --epochs 120 --lr 5e-5
+
+# 4 layers
+python train.py --dataset 14res --syn_gcn_type gatv2 --sem_gcn_type gatv2 --gcn_heads 8 --gcn_layers 4 --batch_size 16 --epochs 120 --lr 5e-5
+```
+
+### **Quick Copy-Paste Commands**
+
+#### **16. One-Liner Commands**
+```bash
+# GATv2Conv (recommended start)
+python train.py --dataset 14res --syn_gcn_type gatv2 --sem_gcn_type gatv2 --gcn_heads 8
+
+# Hybrid (best performance)
+python train.py --dataset 14res --syn_gcn_type hybrid --sem_gcn_type hybrid --gcn_layers 3
+
+# Dynamic (adaptive)
+python train.py --dataset 14res --syn_gcn_type dynamic --sem_gcn_type dynamic
+
+# GIN (alternative)
+python train.py --dataset 14res --syn_gcn_type gin --sem_gcn_type gin --gcn_layers 3
+
+# GraphSAGE (fast)
+python train.py --dataset 14res --syn_gcn_type sage --sem_gcn_type sage --gcn_heads 4
+```
+
+### **Batch Script Commands**
+
+#### **17. Run All GCN Types (Batch Script)**
+```bash
+#!/bin/bash
+# Save as run_all_gcn_types.sh
+
+datasets=("14res" "15res" "16res" "14lap")
+gcn_types=("gatv2" "hybrid" "gin" "sage" "dynamic")
+
+for dataset in "${datasets[@]}"; do
+    for gcn_type in "${gcn_types[@]}"; do
+        echo "Running $gcn_type on $dataset dataset..."
+        python train.py --dataset $dataset --syn_gcn_type $gcn_type --sem_gcn_type $gcn_type --gcn_heads 8 --gcn_layers 2 --batch_size 16 --epochs 120 --lr 5e-5
+    done
+done
+```
+
+#### **18. Performance Comparison Script**
+```bash
+#!/bin/bash
+# Save as compare_performance.sh
+
+dataset="14res"
+echo "Running performance comparison on $dataset dataset..."
+
+echo "1. Baseline (original GCN)..."
+python train.py --dataset $dataset --batch_size 16 --epochs 120 --lr 5e-5
+
+echo "2. GATv2Conv..."
+python train.py --dataset $dataset --syn_gcn_type gatv2 --sem_gcn_type gatv2 --gcn_heads 8 --gcn_layers 2 --batch_size 16 --epochs 120 --lr 5e-5
+
+echo "3. Hybrid..."
+python train.py --dataset $dataset --syn_gcn_type hybrid --sem_gcn_type hybrid --gcn_layers 3 --gcn_heads 12 --batch_size 16 --epochs 120 --lr 5e-5
+
+echo "4. Dynamic..."
+python train.py --dataset $dataset --syn_gcn_type dynamic --sem_gcn_type dynamic --gcn_layers 2 --batch_size 16 --epochs 120 --lr 5e-5
+
+echo "5. GIN..."
+python train.py --dataset $dataset --syn_gcn_type gin --sem_gcn_type gin --gcn_layers 3 --batch_size 16 --epochs 120 --lr 5e-5
+```
+
 ## Expected Improvements
 
 ### Performance Gains
