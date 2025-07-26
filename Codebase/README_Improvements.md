@@ -413,3 +413,15 @@ When contributing improvements:
 ---
 
 **Note:** This guide provides a comprehensive framework for improving the D2E2S model. Implement improvements incrementally and measure their impact on your specific use case. 
+
+# Phase 1: Quick improvements
+python train_improved.py --dataset 14res --use_focal_loss True --use_residual True
+
+# Phase 2: Core improvements  
+python train_improved.py --dataset 14res --use_dynamic_edges True --use_multi_scale True
+
+# Phase 3: Advanced techniques
+python train_improved.py --dataset 14res --use_contrastive True --use_curriculum True
+
+# Full enhanced system
+python train_improved.py --dataset 14res --all_improvements True
