@@ -116,26 +116,9 @@ class ImprovedD2E2SModel(PreTrainedModel):
         if self._is_bidirectional:
             self.number = 2
 
-        if self.USE_CUDA:
-            self.hidden = (
-                weight.new(self.layers * self.number, self.batch_size, self._hidden_dim)
-                .zero_()
-                .float()
-                .to(weight.device),
-                weight.new(self.layers * self.number, self.batch_size, self._hidden_dim)
-                .zero_()
-                .float()
-                .to(weight.device),
-            )
-        else:
-            self.hidden = (
-                weight.new(self.layers * self.number, self.batch_size, self._hidden_dim)
-                .zero_()
-                .float(),
-                weight.new(self.layers * self.number, self.batch_size, self._hidden_dim)
-                .zero_()
-                .float(),
-            )
+        # Initialize hidden state - will be moved to correct device in forward pass
+        self.hidden = None
+        self._hidden_dim_per_layer = self._hidden_dim
 
         # 6、weight initialization
         self.init_weights()
@@ -158,6 +141,24 @@ class ImprovedD2E2SModel(PreTrainedModel):
             nn.LayerNorm(self.deberta_feature_dim)
         )
 
+    def _init_hidden(self, batch_size, device):
+        """Initialize LSTM hidden state on the correct device"""
+        if self.hidden is None or self.hidden[0].size(1) != batch_size:
+            weight = next(self.parameters()).data
+            if self._is_bidirectional:
+                self.number = 2
+            
+            self.hidden = (
+                weight.new(self.layers * self.number, batch_size, self._hidden_dim_per_layer)
+                .zero_()
+                .float()
+                .to(device),
+                weight.new(self.layers * self.number, batch_size, self._hidden_dim_per_layer)
+                .zero_()
+                .float()
+                .to(device),
+            )
+
     def _forward_train(
         self,
         encodings: torch.tensor,
@@ -177,6 +178,10 @@ class ImprovedD2E2SModel(PreTrainedModel):
 
         # encoder layer
         h = self.deberta(input_ids=encodings, attention_mask=self.context_masks)[0]
+        
+        # Initialize hidden state on correct device
+        self._init_hidden(batch_size, h.device)
+        
         self.output, _ = self.lstm(h, self.hidden)
         self.deberta_lstm_output = self.lstm_dropout(self.output)
         self.deberta_lstm_att_feature = self.deberta_lstm_output
@@ -243,6 +248,10 @@ class ImprovedD2E2SModel(PreTrainedModel):
 
         # encoder layer
         h = self.deberta(input_ids=encodings, attention_mask=self.context_masks)[0]
+        
+        # Initialize hidden state on correct device
+        self._init_hidden(batch_size, h.device)
+        
         self.output, _ = self.lstm(h, self.hidden)
         self.deberta_lstm_output = self.lstm_dropout(self.output)
         self.deberta_lstm_att_feature = self.deberta_lstm_output
