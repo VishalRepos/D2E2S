@@ -210,10 +210,7 @@ class ImprovedD2E2SModel(PreTrainedModel):
             encodings, h, entity_masks, size_embeddings, self.args
         )
 
-        # relation_classify
-        h_large = h.unsqueeze(1).repeat(
-            1, max(min(sentiments.shape[1], self._max_pairs), 1), 1, 1
-        )
+        # relation_classify - Memory optimized
         senti_clf = torch.zeros(
             [batch_size, sentiments.shape[1], self._sentiment_types]
         ).to(self.senti_classifier.weight.device)
@@ -223,9 +220,14 @@ class ImprovedD2E2SModel(PreTrainedModel):
         for i in range(0, sentiments.shape[1], self._max_pairs):
             # classify sentiment candidates
             chunk_senti_logits = self._classify_sentiments(
-                entity_spans_pool, size_embeddings, sentiments, senti_masks, h_large, i
+                entity_spans_pool, size_embeddings, sentiments, senti_masks, h, i
             )
-            senti_clf[:, i : i + self._max_pairs, :] = chunk_senti_logits
+            end_idx = min(i + self._max_pairs, sentiments.shape[1])
+            senti_clf[:, i : end_idx, :] = chunk_senti_logits[:, :end_idx - i, :]
+            
+            # Clear memory
+            del chunk_senti_logits
+            torch.cuda.empty_cache() if torch.cuda.is_available() else None
 
         batch_loss = compute_loss(adj_sem_ori, adj_sem_gcn, adj)
 
@@ -289,9 +291,7 @@ class ImprovedD2E2SModel(PreTrainedModel):
             entity_clf, entity_spans, entity_sample_masks, ctx_size
         )
         senti_sample_masks = senti_sample_masks.float().unsqueeze(-1)
-        h_large = h.unsqueeze(1).repeat(
-            1, max(min(sentiments.shape[1], self._max_pairs), 1), 1, 1
-        )
+        # Memory optimized sentiment classification
         senti_clf = torch.zeros(
             [batch_size, sentiments.shape[1], self._sentiment_types]
         ).to(self.senti_classifier.weight.device)
@@ -301,11 +301,16 @@ class ImprovedD2E2SModel(PreTrainedModel):
         for i in range(0, sentiments.shape[1], self._max_pairs):
             # classify sentiment candidates
             chunk_senti_logits = self._classify_sentiments(
-                entity_spans_pool, size_embeddings, sentiments, senti_masks, h_large, i
+                entity_spans_pool, size_embeddings, sentiments, senti_masks, h, i
             )
             # apply sigmoid
             chunk_senti_clf = torch.sigmoid(chunk_senti_logits)
-            senti_clf[:, i : i + self._max_pairs, :] = chunk_senti_clf
+            end_idx = min(i + self._max_pairs, sentiments.shape[1])
+            senti_clf[:, i : end_idx, :] = chunk_senti_clf[:, :end_idx - i, :]
+            
+            # Clear memory
+            del chunk_senti_logits, chunk_senti_clf
+            torch.cuda.empty_cache() if torch.cuda.is_available() else None
 
         senti_clf = senti_clf * senti_sample_masks  # mask
 
@@ -321,30 +326,69 @@ class ImprovedD2E2SModel(PreTrainedModel):
         # m: tensor(4,132,24,1)
         # encoding: tensor(4,24)
         # entity_spans_pool: tensor(4，132，24，768) -> tensor(4,132,768)
-        m = (entity_masks.unsqueeze(-1) == 0).float() * (-1e30)
-        entity_spans_pool = m + h.unsqueeze(1).repeat(1, entity_masks.shape[1], 1, 1)
-
-        self.args = args
-        if self.args.span_generator == "Average" or self.args.span_generator == "Max":
-            if self.args.span_generator == "Max":
-                entity_spans_pool = entity_spans_pool.max(dim=2)[0]
-            else:
-                entity_spans_pool = entity_spans_pool.mean(dim=2, keepdim=True).squeeze(
-                    -2
-                )
+        
+        # Memory optimization: Process in chunks to avoid large tensor creation
+        batch_size, num_entities, seq_len = entity_masks.shape
+        hidden_dim = h.shape[-1]
+        
+        # Initialize output tensor
+        entity_spans_pool = torch.zeros(batch_size, num_entities, hidden_dim, device=h.device)
+        
+        # Process in chunks to save memory
+        chunk_size = min(32, num_entities)  # Process 32 entities at a time
+        
+        for i in range(0, num_entities, chunk_size):
+            end_idx = min(i + chunk_size, num_entities)
+            chunk_masks = entity_masks[:, i:end_idx, :]
+            
+            # Create mask for this chunk
+            m = (chunk_masks.unsqueeze(-1) == 0).float() * (-1e30)
+            
+            # Expand h for this chunk only
+            h_expanded = h.unsqueeze(1).expand(-1, end_idx - i, -1, -1)
+            
+            # Apply mask and pooling
+            chunk_spans = m + h_expanded
+            
+            self.args = args
+            if self.args.span_generator == "Average" or self.args.span_generator == "Max":
+                if self.args.span_generator == "Max":
+                    chunk_spans = chunk_spans.max(dim=2)[0]
+                else:
+                    chunk_spans = chunk_spans.mean(dim=2, keepdim=True).squeeze(-2)
+            
+            # Store results
+            entity_spans_pool[:, i:end_idx, :] = chunk_spans
+            
+            # Clear memory
+            del chunk_spans, h_expanded, m, chunk_masks
+            torch.cuda.empty_cache() if torch.cuda.is_available() else None
 
         # get cls token as candidate context representation
         entity_ctx = get_token(h, encodings, self._cls_token)
 
         # create candidate representations including context, max pooled span and size embedding
-        entity_repr = torch.cat(
-            [
-                entity_ctx.unsqueeze(1).repeat(1, entity_spans_pool.shape[1], 1),
-                entity_spans_pool,
-                size_embeddings,
-            ],
-            dim=2,
-        )
+        # Process in chunks to save memory
+        entity_repr = torch.zeros(batch_size, num_entities, 
+                                entity_ctx.shape[-1] + entity_spans_pool.shape[-1] + size_embeddings.shape[-1], 
+                                device=h.device)
+        
+        for i in range(0, num_entities, chunk_size):
+            end_idx = min(i + chunk_size, num_entities)
+            
+            # Create representation for this chunk
+            chunk_repr = torch.cat([
+                entity_ctx.unsqueeze(1).expand(-1, end_idx - i, -1),
+                entity_spans_pool[:, i:end_idx, :],
+                size_embeddings[:, i:end_idx, :],
+            ], dim=2)
+            
+            entity_repr[:, i:end_idx, :] = chunk_repr
+            
+            # Clear memory
+            del chunk_repr
+            torch.cuda.empty_cache() if torch.cuda.is_available() else None
+        
         entity_repr = self.dropout(entity_repr)
 
         # classify entity candidates
@@ -363,32 +407,54 @@ class ImprovedD2E2SModel(PreTrainedModel):
             senti_masks = senti_masks[:, chunk_start : chunk_start + self._max_pairs]
             h = h[:, : sentiments.shape[1], :]
 
-        # get pairs of entity candidate representations
-        entity_pairs = util.batch_index(entity_spans, sentiments)
-        entity_pairs = entity_pairs.view(batch_size, entity_pairs.shape[1], -1)
+        # Memory optimization: Process in smaller chunks
+        num_pairs = sentiments.shape[1]
+        chunk_size = min(16, num_pairs)  # Process 16 pairs at a time
+        
+        # Initialize output tensor
+        chunk_senti_logits = torch.zeros(batch_size, num_pairs, self._sentiment_types, device=h.device)
+        
+        for i in range(0, num_pairs, chunk_size):
+            end_idx = min(i + chunk_size, num_pairs)
+            
+            # Process this chunk
+            chunk_sentiments = sentiments[:, i:end_idx]
+            chunk_senti_masks = senti_masks[:, i:end_idx]
+            chunk_h = h[:, :end_idx - i, :]
+            
+            # get pairs of entity candidate representations for this chunk
+            entity_pairs = util.batch_index(entity_spans, chunk_sentiments)
+            entity_pairs = entity_pairs.view(batch_size, entity_pairs.shape[1], -1)
 
-        # get corresponding size embeddings
-        size_pair_embeddings = util.batch_index(size_embeddings, sentiments)
-        size_pair_embeddings = size_pair_embeddings.view(
-            batch_size, size_pair_embeddings.shape[1], -1
-        )
+            # get corresponding size embeddings for this chunk
+            size_pair_embeddings = util.batch_index(size_embeddings, chunk_sentiments)
+            size_pair_embeddings = size_pair_embeddings.view(
+                batch_size, size_pair_embeddings.shape[1], -1
+            )
 
-        # sentiment context (context between entity candidate pair)
-        # mask non entity candidate tokens
-        m = ((senti_masks == 0).float() * (-1e30)).unsqueeze(-1)
-        senti_ctx = m + h
-        # max pooling
-        senti_ctx = senti_ctx.max(dim=2)[0]
-        # set the context vector of neighboring or adjacent entity candidates to zero
-        senti_ctx[senti_masks.to(torch.uint8).any(-1) == 0] = 0
+            # sentiment context (context between entity candidate pair)
+            # mask non entity candidate tokens
+            m = ((chunk_senti_masks == 0).float() * (-1e30)).unsqueeze(-1)
+            senti_ctx = m + chunk_h
+            # max pooling
+            senti_ctx = senti_ctx.max(dim=2)[0]
+            # set the context vector of neighboring or adjacent entity candidates to zero
+            senti_ctx[chunk_senti_masks.to(torch.uint8).any(-1) == 0] = 0
 
-        # create sentiment candidate representations including context, max pooled entity candidate pairs
-        # and corresponding size embeddings
-        senti_repr = torch.cat([senti_ctx, entity_pairs, size_pair_embeddings], dim=2)
-        senti_repr = self.dropout(senti_repr)
+            # create sentiment candidate representations including context, max pooled entity candidate pairs
+            # and corresponding size embeddings
+            senti_repr = torch.cat([senti_ctx, entity_pairs, size_pair_embeddings], dim=2)
+            senti_repr = self.dropout(senti_repr)
 
-        # classify sentiment candidates
-        chunk_senti_logits = self.senti_classifier(senti_repr)
+            # classify sentiment candidates for this chunk
+            chunk_logits = self.senti_classifier(senti_repr)
+            chunk_senti_logits[:, i:end_idx, :] = chunk_logits
+            
+            # Clear memory
+            del chunk_sentiments, chunk_senti_masks, chunk_h, entity_pairs, size_pair_embeddings
+            del m, senti_ctx, senti_repr, chunk_logits
+            torch.cuda.empty_cache() if torch.cuda.is_available() else None
+
         return chunk_senti_logits
 
     def log_sample_total(self, neg_entity_count_all):
