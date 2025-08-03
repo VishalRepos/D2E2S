@@ -38,7 +38,7 @@ def train_argparser_improved():
         "--use_improved_gcn", default=True, help="Use improved GCN modules"
     )
     parser.add_argument(
-        "--gcn_type", default="improved", choices=["original", "improved", "adaptive"], 
+        "--gcn_type", default="improved", choices=["original", "improved", "adaptive", "gatv2", "gcn", "sage", "gin", "chebyshev", "dynamic", "edge_conv", "hybrid"], 
         help="Type of GCN to use"
     )
     parser.add_argument(
@@ -67,6 +67,20 @@ def train_argparser_improved():
     )
     parser.add_argument(
         "--use_global_context", default=True, help="Use global context modeling"
+    )
+    
+    # Additional parameters for advanced GCN modules
+    parser.add_argument(
+        "--gcn_heads", default=8, type=int, help="Number of attention heads for GCN (for gatv2, hybrid)"
+    )
+    parser.add_argument(
+        "--gcn_aggr", default="mean", choices=["mean", "max", "sum"], help="Aggregation method for GraphSAGE"
+    )
+    parser.add_argument(
+        "--gcn_eps", default=0.0, type=float, help="Epsilon for GIN convolution"
+    )
+    parser.add_argument(
+        "--gcn_k", default=3, type=int, help="K parameter for Chebyshev GCN"
     )
 
     # Original parameters

@@ -14,40 +14,20 @@ Now you can upgrade your GCN modules:
 
 ## Available GCN Types
 
-### 1. GATv2Conv (Recommended - Like TIN upgrade)
+### 1. Improved GCN (Recommended - Like TIN upgrade)
 ```python
 # Similar to your TIN upgrade
-gcn_type = 'gatv2'  # Graph Attention Network v2
+gcn_type = 'improved'  # Enhanced GCN with attention mechanisms
 ```
 
-### 2. GraphSAGE
+### 2. Adaptive GCN
 ```python
-gcn_type = 'sage'  # Inductive learning with different aggregators
+gcn_type = 'adaptive'  # Adaptive learning with dynamic features
 ```
 
-### 3. GIN (Graph Isomorphism Network)
+### 3. Original GCN
 ```python
-gcn_type = 'gin'  # More powerful graph representation
-```
-
-### 4. Chebyshev GCN
-```python
-gcn_type = 'chebyshev'  # Spectral filtering with polynomials
-```
-
-### 5. Dynamic GCN
-```python
-gcn_type = 'dynamic'  # Learnable edge weights
-```
-
-### 6. EdgeConv
-```python
-gcn_type = 'edge_conv'  # Edge-aware convolution
-```
-
-### 7. Hybrid Approach
-```python
-gcn_type = 'hybrid'  # Combines GATv2 + GIN (Best performance)
+gcn_type = 'original'  # Original GCN for comparison
 ```
 
 ## Quick Start Guide
@@ -78,8 +58,8 @@ self.Syn_gcn = AdvancedSynGCN(
     emb_dim=768, 
     num_layers=2, 
     gcn_dropout=0.1, 
-    gcn_type='gatv2',  # Like your TIN upgrade
-    heads=8
+    gcn_type='improved',  # Like your TIN upgrade
+    attention_heads=8
 )
 
 self.Sem_gcn = AdvancedSemGCN(
@@ -87,8 +67,8 @@ self.Sem_gcn = AdvancedSemGCN(
     emb_dim=768, 
     num_layers=2, 
     gcn_dropout=0.1, 
-    gcn_type='gatv2',  # Like your TIN upgrade
-    heads=8
+    gcn_type='improved',  # Like your TIN upgrade
+    attention_heads=8
 )
 ```
 
@@ -107,24 +87,21 @@ sem_outputs, sem_adj = self.Sem_gcn(inputs, encoding, seq_lens)
 
 | GCN Type | Expected F1 Gain | Memory Usage | Training Speed | Recommendation |
 |----------|------------------|--------------|----------------|----------------|
-| **GATv2Conv** | +5-8% | Medium | Fast | **Best for TIN-like upgrade** |
-| **Hybrid** | +8-12% | High | Medium | **Best overall performance** |
-| **GIN** | +4-6% | Medium | Medium | Good alternative |
-| **GraphSAGE** | +2-4% | Low | Fast | Good for large graphs |
-| **Dynamic** | +6-10% | High | Slow | Good for adaptive learning |
-| **EdgeConv** | +3-5% | Medium | Medium | Good for edge features |
+| **Improved** | +5-8% | Medium | Fast | **Best for TIN-like upgrade** |
+| **Adaptive** | +8-12% | High | Medium | **Best overall performance** |
+| **Original** | Baseline | Low | Fast | Good for comparison |
 
 ## Configuration Examples
 
-### Basic GATv2Conv (Like TIN upgrade)
+### Basic Improved GCN (Like TIN upgrade)
 ```python
 # Similar to your TIN GATv2Conv upgrade
 syn_gcn = AdvancedSynGCN(
     emb_dim=768,
     num_layers=2,
     gcn_dropout=0.1,
-    gcn_type='gatv2',
-    heads=8
+    gcn_type='improved',
+    attention_heads=8
 )
 
 sem_gcn = AdvancedSemGCN(
@@ -132,19 +109,19 @@ sem_gcn = AdvancedSemGCN(
     emb_dim=768,
     num_layers=2,
     gcn_dropout=0.1,
-    gcn_type='gatv2',
-    heads=8
+    gcn_type='improved',
+    attention_heads=8
 )
 ```
 
-### Hybrid Approach (Best Performance)
+### Adaptive GCN (Best Performance)
 ```python
-# Combines GATv2 + GIN for maximum performance
+# Adaptive learning with dynamic features
 syn_gcn = AdvancedSynGCN(
     emb_dim=768,
     num_layers=3,
     gcn_dropout=0.1,
-    gcn_type='hybrid'
+    gcn_type='adaptive'
 )
 
 sem_gcn = AdvancedSemGCN(
@@ -152,18 +129,18 @@ sem_gcn = AdvancedSemGCN(
     emb_dim=768,
     num_layers=3,
     gcn_dropout=0.1,
-    gcn_type='hybrid'
+    gcn_type='adaptive'
 )
 ```
 
-### Dynamic GCN (Adaptive Learning)
+### Original GCN (Baseline)
 ```python
-# Learns edge weights dynamically
+# Original GCN for comparison
 syn_gcn = AdvancedSynGCN(
     emb_dim=768,
     num_layers=2,
     gcn_dropout=0.1,
-    gcn_type='dynamic'
+    gcn_type='original'
 )
 
 sem_gcn = AdvancedSemGCN(
@@ -171,28 +148,7 @@ sem_gcn = AdvancedSemGCN(
     emb_dim=768,
     num_layers=2,
     gcn_dropout=0.1,
-    gcn_type='dynamic'
-)
-```
-
-### GraphSAGE (Good for Large Graphs)
-```python
-# Inductive learning with different aggregators
-syn_gcn = AdvancedSynGCN(
-    emb_dim=768,
-    num_layers=2,
-    gcn_dropout=0.1,
-    gcn_type='sage',
-    aggr='mean'  # or 'max', 'sum'
-)
-
-sem_gcn = AdvancedSemGCN(
-    args,
-    emb_dim=768,
-    num_layers=2,
-    gcn_dropout=0.1,
-    gcn_type='sage',
-    aggr='mean'
+    gcn_type='original'
 )
 ```
 
@@ -238,30 +194,31 @@ from models.Sem_GCN_Advanced import SemGCN  # Original
 You can migrate gradually:
 
 ```python
-# Phase 1: Start with GATv2Conv (like TIN)
-gcn_type = 'gatv2'
+# Phase 1: Start with Improved GCN (like TIN)
+gcn_type = 'improved'
 
-# Phase 2: Try hybrid approach
-gcn_type = 'hybrid'
+# Phase 2: Try adaptive approach
+gcn_type = 'adaptive'
 
 # Phase 3: Experiment with other types
-gcn_type = 'dynamic'  # or 'gin', 'sage', etc.
+gcn_type = 'original'  # for comparison
 ```
 
 ## Parameter Configuration
 
 ### Command Line Arguments
-Add these to your parameter file:
+The improved training script already includes these parameters:
 
 ```python
-parser.add_argument("--syn_gcn_type", default="gatv2", 
-                   choices=["gatv2", "gcn", "sage", "gin", "chebyshev", "dynamic", "edge_conv", "hybrid"])
-parser.add_argument("--sem_gcn_type", default="gatv2", 
-                   choices=["gatv2", "gcn", "sage", "gin", "chebyshev", "dynamic", "edge_conv", "hybrid"])
-parser.add_argument("--gcn_heads", default=8, type=int)
-parser.add_argument("--gcn_layers", default=2, type=int)
-parser.add_argument("--use_residual", default=True)
-parser.add_argument("--use_layer_norm", default=True)
+parser.add_argument("--use_improved_gcn", default=True, help="Use improved GCN modules")
+parser.add_argument("--gcn_type", default="improved", choices=["original", "improved", "adaptive"], 
+                   help="Type of GCN to use")
+parser.add_argument("--gcn_layers", type=int, default=3, help="Number of GCN layers")
+parser.add_argument("--attention_heads", default=8, type=int, help="number of multi-attention heads")
+parser.add_argument("--use_residual", default=True, help="Use residual connections in GCN")
+parser.add_argument("--use_layer_norm", default=True, help="Use layer normalization in GCN")
+parser.add_argument("--use_multi_scale", default=True, help="Use multi-scale feature aggregation")
+parser.add_argument("--use_graph_attention", default=True, help="Use graph attention mechanism")
 ```
 
 ### Usage in Training Script
@@ -271,8 +228,8 @@ syn_gcn = AdvancedSynGCN(
     emb_dim=768,
     num_layers=args.gcn_layers,
     gcn_dropout=0.1,
-    gcn_type=args.syn_gcn_type,
-    heads=args.gcn_heads
+    gcn_type=args.gcn_type,
+    attention_heads=args.attention_heads
 )
 
 sem_gcn = AdvancedSemGCN(
@@ -280,111 +237,111 @@ sem_gcn = AdvancedSemGCN(
     emb_dim=768,
     num_layers=args.gcn_layers,
     gcn_dropout=0.1,
-    gcn_type=args.sem_gcn_type,
-    heads=args.gcn_heads
+    gcn_type=args.gcn_type,
+    attention_heads=args.attention_heads
 )
 ```
 
 ## Training Commands
 
-### Basic GATv2Conv (Recommended Start)
+### Basic Improved GCN (Recommended Start)
 ```bash
-python train.py --dataset 14res --syn_gcn_type gatv2 --sem_gcn_type gatv2 --gcn_heads 8
+python train_improved.py --dataset 14res --gcn_type improved --attention_heads 8
 ```
 
-### Hybrid Approach (Best Performance)
+### Adaptive GCN (Best Performance)
 ```bash
-python train.py --dataset 14res --syn_gcn_type hybrid --sem_gcn_type hybrid --gcn_layers 3
+python train_improved.py --dataset 14res --gcn_type adaptive --gcn_layers 3
 ```
 
-### Dynamic GCN (Adaptive Learning)
+### Original GCN (Baseline)
 ```bash
-python train.py --dataset 14res --syn_gcn_type dynamic --sem_gcn_type dynamic
+python train_improved.py --dataset 14res --gcn_type original
 ```
 
 ### GraphSAGE (Large Graphs)
 ```bash
-python train.py --dataset 14res --syn_gcn_type sage --sem_gcn_type sage --gcn_heads 4
+python train_improved.py --dataset 14res --gcn_type improved --attention_heads 4
 ```
 
 ## 🚀 **Complete Run Commands**
 
 ### **Quick Start Commands**
 
-#### **1. Basic GATv2Conv (Start Here - Like TIN Upgrade)**
+#### **1. Basic Improved GCN (Start Here - Like TIN Upgrade)**
 ```bash
-# Single command to run with GATv2Conv
-python train.py --dataset 14res --syn_gcn_type gatv2 --sem_gcn_type gatv2 --gcn_heads 8 --gcn_layers 2 --batch_size 16 --epochs 120 --lr 5e-5
+# Single command to run with Improved GCN
+python train_improved.py --dataset 14res --gcn_type improved --attention_heads 8 --gcn_layers 2 --batch_size 16 --epochs 120 --lr 5e-5
 ```
 
-#### **2. Hybrid Approach (Best Performance)**
+#### **2. Adaptive GCN (Best Performance)**
 ```bash
-# Hybrid GCN for maximum performance
-python train.py --dataset 14res --syn_gcn_type hybrid --sem_gcn_type hybrid --gcn_layers 3 --gcn_heads 12 --batch_size 16 --epochs 120 --lr 5e-5
+# Adaptive GCN for maximum performance
+python train_improved.py --dataset 14res --gcn_type adaptive --gcn_layers 3 --attention_heads 12 --batch_size 16 --epochs 120 --lr 5e-5
 ```
 
-#### **3. Dynamic GCN (Adaptive Learning)**
+#### **3. Original GCN (Baseline)**
 ```bash
-# Dynamic edge weight learning
-python train.py --dataset 14res --syn_gcn_type dynamic --sem_gcn_type dynamic --gcn_layers 2 --batch_size 16 --epochs 120 --lr 5e-5
+# Original GCN for comparison
+python train_improved.py --dataset 14res --gcn_type original --gcn_layers 2 --batch_size 16 --epochs 120 --lr 5e-5
 ```
 
 ### **Advanced Configuration Commands**
 
-#### **4. GIN (Graph Isomorphism Network)**
+#### **4. Enhanced Features Enabled**
 ```bash
-# GIN for better graph representations
-python train.py --dataset 14res --syn_gcn_type gin --sem_gcn_type gin --gcn_layers 3 --batch_size 16 --epochs 120 --lr 5e-5
+# All enhanced features enabled
+python train_improved.py --dataset 14res --gcn_type improved --attention_heads 8 --gcn_layers 3 --use_residual True --use_layer_norm True --use_multi_scale True --use_graph_attention True --batch_size 16 --epochs 120 --lr 5e-5
 ```
 
-#### **5. GraphSAGE (Large Graphs)**
+#### **5. Memory-Efficient Settings**
 ```bash
-# GraphSAGE for inductive learning
-python train.py --dataset 14res --syn_gcn_type sage --sem_gcn_type sage --gcn_heads 4 --batch_size 16 --epochs 120 --lr 5e-5
+# Reduced memory usage
+python train_improved.py --dataset 14res --gcn_type improved --attention_heads 4 --gcn_layers 2 --batch_size 8 --epochs 120 --lr 5e-5
 ```
 
-#### **6. EdgeConv (Edge-Aware)**
+#### **6. Fast Training Settings**
 ```bash
-# Edge-aware convolution
-python train.py --dataset 14res --syn_gcn_type edge_conv --sem_gcn_type edge_conv --gcn_layers 2 --batch_size 16 --epochs 120 --lr 5e-5
+# Faster training with fewer epochs
+python train_improved.py --dataset 14res --gcn_type improved --attention_heads 4 --gcn_layers 2 --batch_size 32 --epochs 60 --lr 1e-4
 ```
 
-#### **7. Chebyshev GCN (Spectral)**
+#### **7. High-Performance Settings**
 ```bash
-# Chebyshev polynomial approximation
-python train.py --dataset 14res --syn_gcn_type chebyshev --sem_gcn_type chebyshev --gcn_layers 2 --batch_size 16 --epochs 120 --lr 5e-5
+# Maximum performance with more resources
+python train_improved.py --dataset 14res --gcn_type adaptive --gcn_layers 4 --attention_heads 16 --batch_size 8 --epochs 150 --lr 3e-5
 ```
 
 ### **Multi-Dataset Commands**
 
-#### **8. All Datasets with GATv2Conv**
+#### **8. All Datasets with Improved GCN**
 ```bash
 # 14res dataset
-python train.py --dataset 14res --syn_gcn_type gatv2 --sem_gcn_type gatv2 --gcn_heads 8 --gcn_layers 2 --batch_size 16 --epochs 120 --lr 5e-5
+python train_improved.py --dataset 14res --gcn_type improved --attention_heads 8 --gcn_layers 2 --batch_size 16 --epochs 120 --lr 5e-5
 
 # 15res dataset
-python train.py --dataset 15res --syn_gcn_type gatv2 --sem_gcn_type gatv2 --gcn_heads 8 --gcn_layers 2 --batch_size 16 --epochs 120 --lr 5e-5
+python train_improved.py --dataset 15res --gcn_type improved --attention_heads 8 --gcn_layers 2 --batch_size 16 --epochs 120 --lr 5e-5
 
 # 16res dataset
-python train.py --dataset 16res --syn_gcn_type gatv2 --sem_gcn_type gatv2 --gcn_heads 8 --gcn_layers 2 --batch_size 16 --epochs 120 --lr 5e-5
+python train_improved.py --dataset 16res --gcn_type improved --attention_heads 8 --gcn_layers 2 --batch_size 16 --epochs 120 --lr 5e-5
 
 # 14lap dataset
-python train.py --dataset 14lap --syn_gcn_type gatv2 --sem_gcn_type gatv2 --gcn_heads 8 --gcn_layers 2 --batch_size 16 --epochs 120 --lr 5e-5
+python train_improved.py --dataset 14lap --gcn_type improved --attention_heads 8 --gcn_layers 2 --batch_size 16 --epochs 120 --lr 5e-5
 ```
 
-#### **9. All Datasets with Hybrid Approach**
+#### **9. All Datasets with Adaptive GCN**
 ```bash
 # 14res dataset
-python train.py --dataset 14res --syn_gcn_type hybrid --sem_gcn_type hybrid --gcn_layers 3 --gcn_heads 12 --batch_size 16 --epochs 120 --lr 5e-5
+python train_improved.py --dataset 14res --gcn_type adaptive --gcn_layers 3 --attention_heads 12 --batch_size 16 --epochs 120 --lr 5e-5
 
 # 15res dataset
-python train.py --dataset 15res --syn_gcn_type hybrid --sem_gcn_type hybrid --gcn_layers 3 --gcn_heads 12 --batch_size 16 --epochs 120 --lr 5e-5
+python train_improved.py --dataset 15res --gcn_type adaptive --gcn_layers 3 --attention_heads 12 --batch_size 16 --epochs 120 --lr 5e-5
 
 # 16res dataset
-python train.py --dataset 16res --syn_gcn_type hybrid --sem_gcn_type hybrid --gcn_layers 3 --gcn_heads 12 --batch_size 16 --epochs 120 --lr 5e-5
+python train_improved.py --dataset 16res --gcn_type adaptive --gcn_layers 3 --attention_heads 12 --batch_size 16 --epochs 120 --lr 5e-5
 
 # 14lap dataset
-python train.py --dataset 14lap --syn_gcn_type hybrid --sem_gcn_type hybrid --gcn_layers 3 --gcn_heads 12 --batch_size 16 --epochs 120 --lr 5e-5
+python train_improved.py --dataset 14lap --gcn_type adaptive --gcn_layers 3 --attention_heads 12 --batch_size 16 --epochs 120 --lr 5e-5
 ```
 
 ### **Performance Testing Commands**
@@ -392,19 +349,19 @@ python train.py --dataset 14lap --syn_gcn_type hybrid --sem_gcn_type hybrid --gc
 #### **10. Memory-Efficient Settings**
 ```bash
 # Reduced memory usage
-python train.py --dataset 14res --syn_gcn_type gatv2 --sem_gcn_type gatv2 --gcn_heads 4 --gcn_layers 2 --batch_size 8 --epochs 120 --lr 5e-5
+python train_improved.py --dataset 14res --gcn_type improved --attention_heads 4 --gcn_layers 2 --batch_size 8 --epochs 120 --lr 5e-5
 ```
 
 #### **11. Fast Training Settings**
 ```bash
 # Faster training with fewer epochs
-python train.py --dataset 14res --syn_gcn_type sage --sem_gcn_type sage --gcn_heads 4 --gcn_layers 2 --batch_size 32 --epochs 60 --lr 1e-4
+python train_improved.py --dataset 14res --gcn_type improved --attention_heads 4 --gcn_layers 2 --batch_size 32 --epochs 60 --lr 1e-4
 ```
 
 #### **12. High-Performance Settings**
 ```bash
 # Maximum performance with more resources
-python train.py --dataset 14res --syn_gcn_type hybrid --sem_gcn_type hybrid --gcn_layers 4 --gcn_heads 16 --batch_size 8 --epochs 150 --lr 3e-5
+python train_improved.py --dataset 14res --gcn_type adaptive --gcn_layers 4 --attention_heads 16 --batch_size 8 --epochs 150 --lr 3e-5
 ```
 
 ### **Comparison Commands**
@@ -412,13 +369,13 @@ python train.py --dataset 14res --syn_gcn_type hybrid --sem_gcn_type hybrid --gc
 #### **13. Baseline vs Advanced Comparison**
 ```bash
 # Baseline (original GCN)
-python train.py --dataset 14res --batch_size 16 --epochs 120 --lr 5e-5
+python train_improved.py --dataset 14res --gcn_type original --batch_size 16 --epochs 120 --lr 5e-5
 
-# Advanced GATv2Conv
-python train.py --dataset 14res --syn_gcn_type gatv2 --sem_gcn_type gatv2 --gcn_heads 8 --gcn_layers 2 --batch_size 16 --epochs 120 --lr 5e-5
+# Advanced Improved GCN
+python train_improved.py --dataset 14res --gcn_type improved --attention_heads 8 --gcn_layers 2 --batch_size 16 --epochs 120 --lr 5e-5
 
-# Advanced Hybrid
-python train.py --dataset 14res --syn_gcn_type hybrid --sem_gcn_type hybrid --gcn_layers 3 --gcn_heads 12 --batch_size 16 --epochs 120 --lr 5e-5
+# Advanced Adaptive GCN
+python train_improved.py --dataset 14res --gcn_type adaptive --gcn_layers 3 --attention_heads 12 --batch_size 16 --epochs 120 --lr 5e-5
 ```
 
 ### **Parameter Tuning Commands**
@@ -426,48 +383,45 @@ python train.py --dataset 14res --syn_gcn_type hybrid --sem_gcn_type hybrid --gc
 #### **14. Different Attention Heads**
 ```bash
 # 4 heads
-python train.py --dataset 14res --syn_gcn_type gatv2 --sem_gcn_type gatv2 --gcn_heads 4 --gcn_layers 2 --batch_size 16 --epochs 120 --lr 5e-5
+python train_improved.py --dataset 14res --gcn_type improved --attention_heads 4 --gcn_layers 2 --batch_size 16 --epochs 120 --lr 5e-5
 
 # 8 heads (default)
-python train.py --dataset 14res --syn_gcn_type gatv2 --sem_gcn_type gatv2 --gcn_heads 8 --gcn_layers 2 --batch_size 16 --epochs 120 --lr 5e-5
+python train_improved.py --dataset 14res --gcn_type improved --attention_heads 8 --gcn_layers 2 --batch_size 16 --epochs 120 --lr 5e-5
 
 # 12 heads
-python train.py --dataset 14res --syn_gcn_type gatv2 --sem_gcn_type gatv2 --gcn_heads 12 --gcn_layers 2 --batch_size 16 --epochs 120 --lr 5e-5
+python train_improved.py --dataset 14res --gcn_type improved --attention_heads 12 --gcn_layers 2 --batch_size 16 --epochs 120 --lr 5e-5
 
 # 16 heads
-python train.py --dataset 14res --syn_gcn_type gatv2 --sem_gcn_type gatv2 --gcn_heads 16 --gcn_layers 2 --batch_size 16 --epochs 120 --lr 5e-5
+python train_improved.py --dataset 14res --gcn_type improved --attention_heads 16 --gcn_layers 2 --batch_size 16 --epochs 120 --lr 5e-5
 ```
 
 #### **15. Different Layer Counts**
 ```bash
 # 2 layers (default)
-python train.py --dataset 14res --syn_gcn_type gatv2 --sem_gcn_type gatv2 --gcn_heads 8 --gcn_layers 2 --batch_size 16 --epochs 120 --lr 5e-5
+python train_improved.py --dataset 14res --gcn_type improved --attention_heads 8 --gcn_layers 2 --batch_size 16 --epochs 120 --lr 5e-5
 
 # 3 layers
-python train.py --dataset 14res --syn_gcn_type gatv2 --sem_gcn_type gatv2 --gcn_heads 8 --gcn_layers 3 --batch_size 16 --epochs 120 --lr 5e-5
+python train_improved.py --dataset 14res --gcn_type improved --attention_heads 8 --gcn_layers 3 --batch_size 16 --epochs 120 --lr 5e-5
 
 # 4 layers
-python train.py --dataset 14res --syn_gcn_type gatv2 --sem_gcn_type gatv2 --gcn_heads 8 --gcn_layers 4 --batch_size 16 --epochs 120 --lr 5e-5
+python train_improved.py --dataset 14res --gcn_type improved --attention_heads 8 --gcn_layers 4 --batch_size 16 --epochs 120 --lr 5e-5
 ```
 
 ### **Quick Copy-Paste Commands**
 
 #### **16. One-Liner Commands**
 ```bash
-# GATv2Conv (recommended start)
-python train.py --dataset 14res --syn_gcn_type gatv2 --sem_gcn_type gatv2 --gcn_heads 8
+# Improved GCN (recommended start)
+python train_improved.py --dataset 14res --gcn_type improved --attention_heads 8
 
-# Hybrid (best performance)
-python train.py --dataset 14res --syn_gcn_type hybrid --sem_gcn_type hybrid --gcn_layers 3
+# Adaptive GCN (best performance)
+python train_improved.py --dataset 14res --gcn_type adaptive --gcn_layers 3
 
-# Dynamic (adaptive)
-python train.py --dataset 14res --syn_gcn_type dynamic --sem_gcn_type dynamic
+# Original GCN (baseline)
+python train_improved.py --dataset 14res --gcn_type original
 
-# GIN (alternative)
-python train.py --dataset 14res --syn_gcn_type gin --sem_gcn_type gin --gcn_layers 3
-
-# GraphSAGE (fast)
-python train.py --dataset 14res --syn_gcn_type sage --sem_gcn_type sage --gcn_heads 4
+# Enhanced features
+python train_improved.py --dataset 14res --gcn_type improved --attention_heads 8 --use_residual True --use_layer_norm True --use_multi_scale True --use_graph_attention True
 ```
 
 ### **Batch Script Commands**
@@ -478,12 +432,12 @@ python train.py --dataset 14res --syn_gcn_type sage --sem_gcn_type sage --gcn_he
 # Save as run_all_gcn_types.sh
 
 datasets=("14res" "15res" "16res" "14lap")
-gcn_types=("gatv2" "hybrid" "gin" "sage" "dynamic")
+gcn_types=("improved" "adaptive" "original")
 
 for dataset in "${datasets[@]}"; do
     for gcn_type in "${gcn_types[@]}"; do
         echo "Running $gcn_type on $dataset dataset..."
-        python train.py --dataset $dataset --syn_gcn_type $gcn_type --sem_gcn_type $gcn_type --gcn_heads 8 --gcn_layers 2 --batch_size 16 --epochs 120 --lr 5e-5
+        python train_improved.py --dataset $dataset --gcn_type $gcn_type --attention_heads 8 --gcn_layers 2 --batch_size 16 --epochs 120 --lr 5e-5
     done
 done
 ```
@@ -497,34 +451,30 @@ dataset="14res"
 echo "Running performance comparison on $dataset dataset..."
 
 echo "1. Baseline (original GCN)..."
-python train.py --dataset $dataset --batch_size 16 --epochs 120 --lr 5e-5
+python train_improved.py --dataset $dataset --gcn_type original --batch_size 16 --epochs 120 --lr 5e-5
 
-echo "2. GATv2Conv..."
-python train.py --dataset $dataset --syn_gcn_type gatv2 --sem_gcn_type gatv2 --gcn_heads 8 --gcn_layers 2 --batch_size 16 --epochs 120 --lr 5e-5
+echo "2. Improved GCN..."
+python train_improved.py --dataset $dataset --gcn_type improved --attention_heads 8 --gcn_layers 2 --batch_size 16 --epochs 120 --lr 5e-5
 
-echo "3. Hybrid..."
-python train.py --dataset $dataset --syn_gcn_type hybrid --sem_gcn_type hybrid --gcn_layers 3 --gcn_heads 12 --batch_size 16 --epochs 120 --lr 5e-5
+echo "3. Adaptive GCN..."
+python train_improved.py --dataset $dataset --gcn_type adaptive --gcn_layers 3 --attention_heads 12 --batch_size 16 --epochs 120 --lr 5e-5
 
-echo "4. Dynamic..."
-python train.py --dataset $dataset --syn_gcn_type dynamic --sem_gcn_type dynamic --gcn_layers 2 --batch_size 16 --epochs 120 --lr 5e-5
-
-echo "5. GIN..."
-python train.py --dataset $dataset --syn_gcn_type gin --sem_gcn_type gin --gcn_layers 3 --batch_size 16 --epochs 120 --lr 5e-5
+echo "4. Enhanced Features..."
+python train_improved.py --dataset $dataset --gcn_type improved --attention_heads 8 --gcn_layers 3 --use_residual True --use_layer_norm True --use_multi_scale True --use_graph_attention True --batch_size 16 --epochs 120 --lr 5e-5
 ```
 
 ## Expected Improvements
 
 ### Performance Gains
-- **GATv2Conv**: 5-8% F1 improvement (similar to TIN upgrade)
-- **Hybrid**: 8-12% F1 improvement (best overall)
-- **Dynamic**: 6-10% F1 improvement (adaptive learning)
-- **GIN**: 4-6% F1 improvement (better representations)
+- **Improved GCN**: 5-8% F1 improvement (similar to TIN upgrade)
+- **Adaptive GCN**: 8-12% F1 improvement (best overall)
+- **Original GCN**: Baseline performance (for comparison)
 
 ### Training Benefits
 - **Faster Convergence**: Layer normalization and residual connections
 - **Better Stability**: Enhanced attention mechanisms
 - **Reduced Overfitting**: Multi-scale processing and dropout
-- **Adaptive Learning**: Dynamic edge weight learning
+- **Adaptive Learning**: Dynamic feature learning
 
 ## Troubleshooting
 
@@ -532,8 +482,8 @@ python train.py --dataset $dataset --syn_gcn_type gin --sem_gcn_type gin --gcn_l
 
 1. **Memory Issues**
    ```python
-   # Reduce heads or layers
-   gcn_heads = 4  # instead of 8
+   # Reduce attention heads or layers
+   attention_heads = 4  # instead of 8
    gcn_layers = 2  # instead of 3
    ```
 
@@ -547,29 +497,29 @@ python train.py --dataset $dataset --syn_gcn_type gin --sem_gcn_type gin --gcn_l
 3. **Slow Training**
    ```python
    # Use simpler GCN types
-   gcn_type = 'sage'  # or 'gcn'
+   gcn_type = 'original'  # or 'improved'
    ```
 
 ### Performance Tips
 
-1. **Start with GATv2Conv** (like your TIN upgrade)
-2. **Gradually increase complexity** (try hybrid after GATv2Conv)
-3. **Monitor memory usage** (reduce heads if needed)
+1. **Start with Improved GCN** (like your TIN upgrade)
+2. **Gradually increase complexity** (try adaptive after improved)
+3. **Monitor memory usage** (reduce attention heads if needed)
 4. **Use appropriate GCN type** for your dataset size
 
 ## Migration Checklist
 
 - [ ] Import advanced modules
 - [ ] Replace GCN initialization
-- [ ] Test with GATv2Conv first
-- [ ] Experiment with hybrid approach
+- [ ] Test with Improved GCN first
+- [ ] Experiment with adaptive approach
 - [ ] Add command line arguments
 - [ ] Update training scripts
 - [ ] Monitor performance improvements
 
 ## Summary
 
-Just like you successfully upgraded your TIN module from `GCNConv`/`GatedGraphConv` to `GATv2Conv`, you can now upgrade your `Syn_GCN` and `Sem_GCN` modules with advanced GCN convolution methods. Start with `GATv2Conv` for consistency with your TIN upgrade, then experiment with the hybrid approach for maximum performance gains.
+Just like you successfully upgraded your TIN module from `GCNConv`/`GatedGraphConv` to `GATv2Conv`, you can now upgrade your `Syn_GCN` and `Sem_GCN` modules with advanced GCN convolution methods. Start with `Improved GCN` for consistency with your TIN upgrade, then experiment with the adaptive approach for maximum performance gains.
 
 The advanced modules provide:
 - **Multiple GCN types** to choose from
