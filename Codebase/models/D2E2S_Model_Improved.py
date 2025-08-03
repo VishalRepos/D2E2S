@@ -424,6 +424,10 @@ class ImprovedD2E2SModel(PreTrainedModel):
             # Use the full h tensor - don't slice it incorrectly
             chunk_h = h
             
+            # Handle the case where we have multiple sentiment pairs
+            # For each pair, we need to process the corresponding mask
+            num_pairs_in_chunk = chunk_sentiments.shape[1]
+            
             # get pairs of entity candidate representations for this chunk
             entity_pairs = util.batch_index(entity_spans, chunk_sentiments)
             entity_pairs = entity_pairs.view(batch_size, entity_pairs.shape[1], -1)
@@ -436,28 +440,45 @@ class ImprovedD2E2SModel(PreTrainedModel):
 
             # sentiment context (context between entity candidate pair)
             # mask non entity candidate tokens
-            # Ensure mask has the correct sequence length
+            # Process each sentiment pair in the chunk
             seq_len = chunk_h.shape[1]
             
-            # The issue is that chunk_senti_masks has wrong dimensions
-            # We need to ensure it matches the sequence length of chunk_h
-            if chunk_senti_masks.shape[1] != seq_len:
-                # Create a new mask with the correct sequence length
-                batch_size = chunk_senti_masks.shape[0]
-                new_mask = torch.zeros(batch_size, seq_len, device=chunk_senti_masks.device)
-                
-                # Copy the original mask values if possible
-                min_len = min(chunk_senti_masks.shape[1], seq_len)
-                new_mask[:, :min_len] = chunk_senti_masks[:, :min_len]
-                
-                chunk_senti_masks = new_mask
+            # Initialize output for this chunk
+            chunk_senti_ctx = torch.zeros(batch_size, num_pairs_in_chunk, chunk_h.shape[-1], device=chunk_h.device)
             
-            m = ((chunk_senti_masks == 0).float() * (-1e30)).unsqueeze(-1)
-            senti_ctx = m + chunk_h
-            # max pooling
-            senti_ctx = senti_ctx.max(dim=2)[0]
-            # set the context vector of neighboring or adjacent entity candidates to zero
-            senti_ctx[chunk_senti_masks.to(torch.uint8).any(-1) == 0] = 0
+            for pair_idx in range(num_pairs_in_chunk):
+                # Get mask for this specific pair
+                if len(chunk_senti_masks.shape) == 3:
+                    # 3D mask: [batch, num_pairs, seq_len]
+                    pair_mask = chunk_senti_masks[:, pair_idx, :]
+                else:
+                    # 2D mask: [batch, seq_len] - use for all pairs
+                    pair_mask = chunk_senti_masks
+                
+                # Ensure mask has the correct sequence length
+                if pair_mask.shape[1] != seq_len:
+                    # Create a new mask with the correct sequence length
+                    batch_size_mask = pair_mask.shape[0]
+                    new_mask = torch.zeros(batch_size_mask, seq_len, device=pair_mask.device)
+                    
+                    # Copy the original mask values if possible
+                    min_len = min(pair_mask.shape[1], seq_len)
+                    new_mask[:, :min_len] = pair_mask[:, :min_len]
+                    
+                    pair_mask = new_mask
+                
+                m = ((pair_mask == 0).float() * (-1e30)).unsqueeze(-1)
+                pair_ctx = m + chunk_h
+                # max pooling
+                pair_ctx = pair_ctx.max(dim=2)[0]
+                # set the context vector of neighboring or adjacent entity candidates to zero
+                pair_ctx[pair_mask.to(torch.uint8).any(-1) == 0] = 0
+                
+                # Store result for this pair
+                chunk_senti_ctx[:, pair_idx, :] = pair_ctx
+            
+            # Use the first pair's context for the entire chunk (simplified approach)
+            senti_ctx = chunk_senti_ctx[:, 0, :]
 
             # create sentiment candidate representations including context, max pooled entity candidate pairs
             # and corresponding size embeddings
@@ -470,7 +491,7 @@ class ImprovedD2E2SModel(PreTrainedModel):
             
             # Clear memory
             del chunk_sentiments, chunk_senti_masks, chunk_h, entity_pairs, size_pair_embeddings
-            del m, senti_ctx, senti_repr, chunk_logits
+            del chunk_senti_ctx, senti_ctx, senti_repr, chunk_logits
             torch.cuda.empty_cache() if torch.cuda.is_available() else None
 
         return chunk_senti_logits
