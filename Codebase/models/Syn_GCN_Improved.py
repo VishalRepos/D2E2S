@@ -150,10 +150,23 @@ class MultiScaleAggregation(nn.Module):
         for conv in self.scale_conv:
             conv_out = conv(conv_inputs)
             conv_out = F.relu(conv_out)
+            # Ensure output has same sequence length as input
+            if conv_out.size(-1) != seq_len:
+                conv_out = F.interpolate(conv_out, size=seq_len, mode='linear', align_corners=False)
             scale_outputs.append(conv_out.transpose(1, 2))  # (batch, seq, hidden)
         
         # Concatenate multi-scale features
         multi_scale_features = torch.cat(scale_outputs, dim=-1)
+        
+        # Ensure dimensions match for matrix multiplication
+        if multi_scale_features.size(1) != adj.size(1):
+            # Resize multi_scale_features to match adjacency matrix
+            multi_scale_features = F.interpolate(
+                multi_scale_features.transpose(1, 2), 
+                size=adj.size(1), 
+                mode='linear', 
+                align_corners=False
+            ).transpose(1, 2)
         
         # Graph-based aggregation
         graph_enhanced = adj.bmm(multi_scale_features)
