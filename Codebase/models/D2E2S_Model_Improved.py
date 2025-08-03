@@ -420,7 +420,8 @@ class ImprovedD2E2SModel(PreTrainedModel):
             # Process this chunk
             chunk_sentiments = sentiments[:, i:end_idx]
             chunk_senti_masks = senti_masks[:, i:end_idx]
-            chunk_h = h[:, :end_idx - i, :]
+            # Use the full h tensor - don't slice it incorrectly
+            chunk_h = h
             
             # get pairs of entity candidate representations for this chunk
             entity_pairs = util.batch_index(entity_spans, chunk_sentiments)
@@ -434,6 +435,17 @@ class ImprovedD2E2SModel(PreTrainedModel):
 
             # sentiment context (context between entity candidate pair)
             # mask non entity candidate tokens
+            # Ensure mask has the correct sequence length
+            seq_len = chunk_h.shape[1]
+            if chunk_senti_masks.shape[1] != seq_len:
+                # Pad or truncate the mask to match sequence length
+                if chunk_senti_masks.shape[1] > seq_len:
+                    chunk_senti_masks = chunk_senti_masks[:, :seq_len]
+                else:
+                    # Pad with zeros
+                    pad_size = seq_len - chunk_senti_masks.shape[1]
+                    chunk_senti_masks = F.pad(chunk_senti_masks, (0, pad_size), value=0)
+            
             m = ((chunk_senti_masks == 0).float() * (-1e30)).unsqueeze(-1)
             senti_ctx = m + chunk_h
             # max pooling
