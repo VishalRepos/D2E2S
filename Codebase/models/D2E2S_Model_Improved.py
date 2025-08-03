@@ -286,9 +286,10 @@ class ImprovedD2E2SModel(PreTrainedModel):
         )
 
         # ignore entity candidates that do not constitute an actual entity for sentiments (based on classifier)
-        ctx_size = context_masks.shape[-1]
+        # Use the actual sequence length from hidden states instead of context_masks
+        actual_seq_len = h.shape[1]  # This is the actual sequence length
         sentiments, senti_masks, senti_sample_masks = self._filter_spans(
-            entity_clf, entity_spans, entity_sample_masks, ctx_size
+            entity_clf, entity_spans, entity_sample_masks, actual_seq_len
         )
         senti_sample_masks = senti_sample_masks.float().unsqueeze(-1)
         # Memory optimized sentiment classification
@@ -437,14 +438,19 @@ class ImprovedD2E2SModel(PreTrainedModel):
             # mask non entity candidate tokens
             # Ensure mask has the correct sequence length
             seq_len = chunk_h.shape[1]
+            
+            # The issue is that chunk_senti_masks has wrong dimensions
+            # We need to ensure it matches the sequence length of chunk_h
             if chunk_senti_masks.shape[1] != seq_len:
-                # Pad or truncate the mask to match sequence length
-                if chunk_senti_masks.shape[1] > seq_len:
-                    chunk_senti_masks = chunk_senti_masks[:, :seq_len]
-                else:
-                    # Pad with zeros
-                    pad_size = seq_len - chunk_senti_masks.shape[1]
-                    chunk_senti_masks = F.pad(chunk_senti_masks, (0, pad_size), value=0)
+                # Create a new mask with the correct sequence length
+                batch_size = chunk_senti_masks.shape[0]
+                new_mask = torch.zeros(batch_size, seq_len, device=chunk_senti_masks.device)
+                
+                # Copy the original mask values if possible
+                min_len = min(chunk_senti_masks.shape[1], seq_len)
+                new_mask[:, :min_len] = chunk_senti_masks[:, :min_len]
+                
+                chunk_senti_masks = new_mask
             
             m = ((chunk_senti_masks == 0).float() * (-1e30)).unsqueeze(-1)
             senti_ctx = m + chunk_h
