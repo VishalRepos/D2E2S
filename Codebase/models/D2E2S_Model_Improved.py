@@ -475,8 +475,6 @@ class ImprovedD2E2SModel(PreTrainedModel):
                 # We want to max pool over seq_len to get [batch, hidden_dim]
                 # The issue is that we're max pooling over the wrong dimension
                 # We need to max pool over dim=1 (sequence dimension) to get [batch, hidden_dim]
-                # Let's debug the shapes first
-                print(f"DEBUG: pair_ctx.shape={pair_ctx.shape}, chunk_h.shape={chunk_h.shape}")
                 pair_ctx = pair_ctx.max(dim=1)[0]  # Max pool over sequence dimension (dim=1)
                 # set the context vector of neighboring or adjacent entity candidates to zero
                 # This line needs to be removed since we're now working with hidden features, not sequence positions
@@ -490,7 +488,11 @@ class ImprovedD2E2SModel(PreTrainedModel):
 
             # create sentiment candidate representations including context, max pooled entity candidate pairs
             # and corresponding size embeddings
-            senti_repr = torch.cat([senti_ctx, entity_pairs, size_pair_embeddings], dim=2)
+            # senti_ctx has shape [batch, hidden_dim] (2D)
+            # entity_pairs and size_pair_embeddings have shape [batch, num_pairs, feature_dim] (3D)
+            # We need to expand senti_ctx to match the 3D shape
+            senti_ctx_expanded = senti_ctx.unsqueeze(1).expand(-1, entity_pairs.shape[1], -1)
+            senti_repr = torch.cat([senti_ctx_expanded, entity_pairs, size_pair_embeddings], dim=2)
             senti_repr = self.dropout(senti_repr)
 
             # classify sentiment candidates for this chunk
