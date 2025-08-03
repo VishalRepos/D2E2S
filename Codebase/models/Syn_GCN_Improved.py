@@ -150,10 +150,33 @@ class MultiScaleAggregation(nn.Module):
         for conv in self.scale_conv:
             conv_out = conv(conv_inputs)
             conv_out = F.relu(conv_out)
+            # Ensure the output has the same sequence length as input
+            if conv_out.size(-1) != seq_len:
+                # Pad or truncate to match original sequence length
+                if conv_out.size(-1) > seq_len:
+                    conv_out = conv_out[:, :, :seq_len]
+                else:
+                    # Pad with zeros
+                    padding = torch.zeros(batch_size, hidden_dim, seq_len - conv_out.size(-1), device=conv_out.device)
+                    conv_out = torch.cat([conv_out, padding], dim=-1)
+            
             scale_outputs.append(conv_out.transpose(1, 2))  # (batch, seq, hidden)
         
         # Concatenate multi-scale features
         multi_scale_features = torch.cat(scale_outputs, dim=-1)
+        
+        # Ensure adjacency matrix matches sequence length
+        if adj.size(-1) != seq_len or adj.size(-2) != seq_len:
+            # Resize adjacency matrix to match sequence length
+            if adj.size(-1) > seq_len:
+                adj = adj[:, :seq_len, :seq_len]
+            else:
+                # Pad adjacency matrix
+                pad_size = seq_len - adj.size(-1)
+                adj = F.pad(adj, (0, pad_size, 0, pad_size), value=0)
+                # Set diagonal to 1 for padded positions
+                for i in range(adj.size(0)):
+                    adj[i, adj.size(-1)-pad_size:, adj.size(-1)-pad_size:] = torch.eye(pad_size, device=adj.device)
         
         # Graph-based aggregation
         graph_enhanced = adj.bmm(multi_scale_features)
