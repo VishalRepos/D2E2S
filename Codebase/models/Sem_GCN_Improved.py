@@ -62,18 +62,10 @@ class ImprovedSemGCN(nn.Module):
         gcn_inputs = inputs
         
         # Enhanced attention mechanism
-        attn_tensor = self.attn(gcn_inputs, gcn_inputs, src_mask)
-        attn_adj_list = [attn_adj.squeeze(1) for attn_adj in torch.split(attn_tensor, 1, dim=1)]
+        attn_tensor = self.attn(gcn_inputs, gcn_inputs, src_mask)  # (batch_size, num_heads, seq_len, seq_len)
         
-        # Multi-scale attention fusion
-        adj_ag = None
-        for i in range(self.attention_heads):
-            if adj_ag is None:
-                adj_ag = attn_adj_list[i]
-            else:
-                adj_ag += attn_adj_list[i]
-        adj_ag_new = adj_ag.clone()
-        adj_ag_new /= self.attention_heads
+        # Average attention weights across heads
+        adj_ag_new = attn_tensor.mean(dim=1)  # (batch_size, seq_len, seq_len)
 
         # Enhanced adjacency matrix processing
         for j in range(adj_ag_new.size(0)):
@@ -150,12 +142,20 @@ class ImprovedMultiHeadAttention(nn.Module):
         query = self.relative_position_encoding(query)
         key = self.relative_position_encoding(key)
 
-        attn = improved_attention(query, key, value, mask=mask, dropout=self.dropout)
+        # Compute attention scores
+        d_k = query.size(-1)
+        scores = torch.matmul(query, key.transpose(-2, -1)) / math.sqrt(d_k)
         
-        # Concatenate and apply final linear transformation
-        attn = attn.transpose(1, 2).contiguous().view(nbatches, -1, self.h * self.d_k)
+        if mask is not None:
+            scores = scores.masked_fill(mask == 0, -1e9)
+
+        # Apply attention
+        attn_weights = F.softmax(scores, dim=-1)
+        attn_weights = self.dropout(attn_weights)
         
-        return attn
+        # Return attention weights for each head
+        # Shape: (batch_size, num_heads, seq_len, seq_len)
+        return attn_weights
 
 
 class RelativePositionEncoding(nn.Module):
@@ -170,16 +170,10 @@ class RelativePositionEncoding(nn.Module):
     def forward(self, x):
         batch_size, num_heads, seq_len, d_model = x.size()
         
-        # Create relative position indices
-        pos_indices = torch.arange(seq_len, device=x.device)
-        rel_pos_indices = pos_indices.unsqueeze(1) - pos_indices.unsqueeze(0)
-        rel_pos_indices += self.max_len - 1  # Shift to non-negative indices
-        
-        # Get relative position embeddings
-        rel_pos_emb = self.rel_pos_emb[rel_pos_indices]
-        
-        # Add to input
-        return x + rel_pos_emb.unsqueeze(1)  # Add head dimension
+        # For now, return the input without relative position encoding
+        # as the current implementation has dimension issues
+        # TODO: Implement proper relative position encoding for attention
+        return x
 
 
 class PositionalEncoding(nn.Module):
