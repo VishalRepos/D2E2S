@@ -1,14 +1,3 @@
-I'll help you identify the top 5 commands from the README_COMMANDS.md file, ordered from highest to lowest expected performance. Let me first check the current README_COMMANDS.md file to see what commands are available.
-
-Read file: Codebase/README_COMMANDS.md
-Now let me also check the original README_improvments_2.md to see if there are any performance benchmarks mentioned there that can help me rank the commands by expected performance.
-
-Read file: Codebase/README_improvments_2.md
-Let me continue reading to see if there are more performance details:
-
-Ran tool
-Based on the performance information from both README files, I can now provide you with the top 5 commands ordered from highest to lowest expected performance:
-
 ## Top 5 Commands by Expected Performance (High to Low)
 
 ### **1. Hybrid GCN (Highest Performance - 12-15% F1 improvement)**
