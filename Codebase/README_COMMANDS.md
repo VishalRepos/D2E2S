@@ -27,6 +27,7 @@ Based on your `Parameter_Improved.py`, these are the actual parameters you can u
 - `--batch_size`: Training batch size (default: 16)
 - `--epochs`: Number of epochs (default: 120)
 - `--lr`: Learning rate (default: 5e-5)
+- `--deterministic`: Use deterministic algorithms (default: False)
 
 ## 🚀 Ready-to-Run Commands
 

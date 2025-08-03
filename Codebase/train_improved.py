@@ -86,6 +86,13 @@ class ImprovedD2E2S_Trainer(BaseTrainer):
 
         # set seed
         set_seed(args.seed)
+        
+        # Handle deterministic mode
+        if hasattr(args, 'deterministic') and args.deterministic:
+            torch.use_deterministic_algorithms(True)
+        else:
+            # Use non-deterministic mode to avoid interpolation issues
+            torch.use_deterministic_algorithms(False)
 
         train_label, test_label = "train", "test"
         input_reader, updates_total, updates_epoch = self._preprocess(

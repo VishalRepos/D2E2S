@@ -283,6 +283,7 @@ def train_argparser_improved():
         help="Save optimizer alongside model",
     )
     parser.add_argument("--device", type=str, default="cuda", help="gpu or cpu")
+    parser.add_argument("--deterministic", action="store_true", default=False, help="Use deterministic algorithms")
 
     opt = parser.parse_args()
     opt.label = opt.dataset

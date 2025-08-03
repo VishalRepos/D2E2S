@@ -152,7 +152,14 @@ class MultiScaleAggregation(nn.Module):
             conv_out = F.relu(conv_out)
             # Ensure output has same sequence length as input
             if conv_out.size(-1) != seq_len:
-                conv_out = F.interpolate(conv_out, size=seq_len, mode='linear', align_corners=False)
+                # Use deterministic resizing instead of interpolation
+                if conv_out.size(-1) > seq_len:
+                    # Truncate if too long
+                    conv_out = conv_out[:, :, :seq_len]
+                else:
+                    # Pad if too short
+                    padding = seq_len - conv_out.size(-1)
+                    conv_out = F.pad(conv_out, (0, padding), mode='replicate')
             scale_outputs.append(conv_out.transpose(1, 2))  # (batch, seq, hidden)
         
         # Concatenate multi-scale features
@@ -160,13 +167,14 @@ class MultiScaleAggregation(nn.Module):
         
         # Ensure dimensions match for matrix multiplication
         if multi_scale_features.size(1) != adj.size(1):
-            # Resize multi_scale_features to match adjacency matrix
-            multi_scale_features = F.interpolate(
-                multi_scale_features.transpose(1, 2), 
-                size=adj.size(1), 
-                mode='linear', 
-                align_corners=False
-            ).transpose(1, 2)
+            # Resize multi_scale_features to match adjacency matrix using deterministic approach
+            if multi_scale_features.size(1) > adj.size(1):
+                # Truncate if too long
+                multi_scale_features = multi_scale_features[:, :adj.size(1), :]
+            else:
+                # Pad if too short
+                padding = adj.size(1) - multi_scale_features.size(1)
+                multi_scale_features = F.pad(multi_scale_features, (0, 0, 0, padding), mode='replicate')
         
         # Graph-based aggregation
         graph_enhanced = adj.bmm(multi_scale_features)
