@@ -78,7 +78,7 @@ class ImprovedSemGCN(nn.Module):
         # Enhanced adjacency matrix processing
         for j in range(adj_ag_new.size(0)):
             adj_ag_new[j] -= torch.diag(torch.diag(adj_ag_new[j]))
-            adj_ag_new[j] += torch.eye(adj_ag_new[j].size(0)).cuda()
+            adj_ag_new[j] += torch.eye(adj_ag_new[j].size(0)).to(inputs.device)
             # Add edge weight normalization
             adj_ag_new[j] = F.softmax(adj_ag_new[j], dim=-1)
         adj_ag_new = mask_ * adj_ag_new

@@ -121,11 +121,11 @@ class ImprovedD2E2SModel(PreTrainedModel):
                 weight.new(self.layers * self.number, self.batch_size, self._hidden_dim)
                 .zero_()
                 .float()
-                .cuda(),
+                .to(weight.device),
                 weight.new(self.layers * self.number, self.batch_size, self._hidden_dim)
                 .zero_()
                 .float()
-                .cuda(),
+                .to(weight.device),
             )
         else:
             self.hidden = (

@@ -35,7 +35,7 @@ def train_argparser_improved():
 
     # Enhanced GCN parameters
     parser.add_argument(
-        "--use_improved_gcn", default=True, help="Use improved GCN modules"
+        "--use_improved_gcn", action="store_true", default=True, help="Use improved GCN modules"
     )
     parser.add_argument(
         "--gcn_type", default="improved", choices=["original", "improved", "adaptive"], 
@@ -48,25 +48,25 @@ def train_argparser_improved():
         "--attention_heads", default=8, type=int, help="number of multi-attention heads"
     )
     parser.add_argument(
-        "--use_residual", default=True, help="Use residual connections in GCN"
+        "--use_residual", action="store_true", default=True, help="Use residual connections in GCN"
     )
     parser.add_argument(
-        "--use_layer_norm", default=True, help="Use layer normalization in GCN"
+        "--use_layer_norm", action="store_true", default=True, help="Use layer normalization in GCN"
     )
     parser.add_argument(
-        "--use_multi_scale", default=True, help="Use multi-scale feature aggregation"
+        "--use_multi_scale", action="store_true", default=True, help="Use multi-scale feature aggregation"
     )
     parser.add_argument(
-        "--use_graph_attention", default=True, help="Use graph attention mechanism"
+        "--use_graph_attention", action="store_true", default=True, help="Use graph attention mechanism"
     )
     parser.add_argument(
-        "--use_adaptive_edges", default=False, help="Use adaptive edge weight learning"
+        "--use_adaptive_edges", action="store_true", default=False, help="Use adaptive edge weight learning"
     )
     parser.add_argument(
-        "--use_relative_position", default=True, help="Use relative position encoding"
+        "--use_relative_position", action="store_true", default=True, help="Use relative position encoding"
     )
     parser.add_argument(
-        "--use_global_context", default=True, help="Use global context modeling"
+        "--use_global_context", action="store_true", default=True, help="Use global context modeling"
     )
 
     # Original parameters
@@ -268,15 +268,25 @@ def train_argparser_improved():
         default=False,
         help="Save optimizer alongside model",
     )
-    parser.add_argument("--device", type=str, default="cuda", help="gpu or cpu")
+    parser.add_argument("--device", type=str, default=None, help="gpu or cpu")
 
     opt = parser.parse_args()
     opt.label = opt.dataset
 
     opt.dataset_file = dataset_files[opt.dataset]
-    opt.device = (
-        torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        if opt.device is None
-        else torch.device(opt.device)
-    )
+    
+    # Enhanced device detection with CPU fallback
+    if opt.device is None:
+        if torch.cuda.is_available():
+            opt.device = torch.device("cuda")
+            print(f"Using GPU: {torch.cuda.get_device_name(0)}")
+        else:
+            opt.device = torch.device("cpu")
+            print("CUDA not available, using CPU")
+    else:
+        opt.device = torch.device(opt.device)
+        if opt.device.type == "cuda" and not torch.cuda.is_available():
+            print("CUDA requested but not available, falling back to CPU")
+            opt.device = torch.device("cpu")
+    
     return opt 
