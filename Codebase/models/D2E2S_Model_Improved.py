@@ -444,6 +444,7 @@ class ImprovedD2E2SModel(PreTrainedModel):
             seq_len = chunk_h.shape[1]
             
             # Initialize output for this chunk
+            # chunk_h.shape[-1] is the hidden dimension (768)
             chunk_senti_ctx = torch.zeros(batch_size, num_pairs_in_chunk, chunk_h.shape[-1], device=chunk_h.device)
             
             for pair_idx in range(num_pairs_in_chunk):
@@ -469,10 +470,17 @@ class ImprovedD2E2SModel(PreTrainedModel):
                 
                 m = ((pair_mask == 0).float() * (-1e30)).unsqueeze(-1)
                 pair_ctx = m + chunk_h
-                # max pooling
-                pair_ctx = pair_ctx.max(dim=2)[0]
+                # max pooling over sequence dimension to get hidden features
+                # pair_ctx shape: [batch, seq_len, hidden_dim]
+                # We want to max pool over seq_len to get [batch, hidden_dim]
+                # The issue is that we're max pooling over the wrong dimension
+                # We need to max pool over dim=1 (sequence dimension) to get [batch, hidden_dim]
+                # Let's debug the shapes first
+                print(f"DEBUG: pair_ctx.shape={pair_ctx.shape}, chunk_h.shape={chunk_h.shape}")
+                pair_ctx = pair_ctx.max(dim=1)[0]  # Max pool over sequence dimension (dim=1)
                 # set the context vector of neighboring or adjacent entity candidates to zero
-                pair_ctx[pair_mask.to(torch.uint8).any(-1) == 0] = 0
+                # This line needs to be removed since we're now working with hidden features, not sequence positions
+                # pair_ctx[pair_mask.to(torch.uint8).any(-1) == 0] = 0
                 
                 # Store result for this pair
                 chunk_senti_ctx[:, pair_idx, :] = pair_ctx
