@@ -41,10 +41,10 @@ def train_argparser():
         "--use_gated", default=False, help="Do use gcnconv and gatedgraphconv."
     )
     parser.add_argument(
-        "--hidden_dim", type=int, default=384, help="hidden layer dimension."
+        "--hidden_dim", type=int, default=768, help="hidden layer dimension."
     )
     parser.add_argument(
-        "--emb_dim", type=int, default=768, help="Word embedding dimension."
+        "--emb_dim", type=int, default=1536, help="Word embedding dimension."
     )
     parser.add_argument(
         "--lstm_layers", type=int, default=2, help="Number of LSTM layers."
@@ -77,7 +77,7 @@ def train_argparser():
     parser.add_argument(
         "--deberta_feature_dim",
         type=int,
-        default=768,
+        default=1536,
         help="dimension of pretrained deberta feature",
     )
     parser.add_argument(

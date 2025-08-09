@@ -69,11 +69,11 @@ class ImprovedD2E2SModel(PreTrainedModel):
 
         # Enhanced GCN modules based on configuration
         if hasattr(self.args, 'gcn_type') and self.args.gcn_type == "adaptive":
-            self.Syn_gcn = AdaptiveGCN(emb_dim=768, num_layers=self.args.gcn_layers, gcn_dropout=self.gcn_dropout)
+            self.Syn_gcn = AdaptiveGCN(emb_dim=self._emb_dim, num_layers=self.args.gcn_layers, gcn_dropout=self.gcn_dropout)
         else:
-            self.Syn_gcn = ImprovedGCN(emb_dim=768, num_layers=self.args.gcn_layers, gcn_dropout=self.gcn_dropout)
+            self.Syn_gcn = ImprovedGCN(emb_dim=self._emb_dim, num_layers=self.args.gcn_layers, gcn_dropout=self.gcn_dropout)
             
-        self.Sem_gcn = ImprovedSemGCN(self.args, emb_dim=768, num_layers=self.args.gcn_layers, gcn_dropout=self.gcn_dropout)
+        self.Sem_gcn = ImprovedSemGCN(self.args, emb_dim=self._emb_dim, num_layers=self.args.gcn_layers, gcn_dropout=self.gcn_dropout)
         
         self.senti_classifier = nn.Linear(
             config.hidden_size * 3 + self._size_embedding * 2, sentiment_types
