@@ -232,7 +232,7 @@ def train_argparser_improved():
         help="Log training process every x iterations",
     )
     parser.add_argument(
-        "--pretrained_deberta_name", default="microsoft/deberta-v3-base", type=str
+        "--pretrained_deberta_name", default="microsoft/deberta-v2-xxlarge", type=str
     )
     parser.add_argument(
         "--weight_decay", type=float, default=0.01, help="Weight decay to apply"
