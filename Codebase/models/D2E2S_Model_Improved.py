@@ -64,7 +64,7 @@ class ImprovedD2E2SModel(PreTrainedModel):
 
         # 2、DEBERT model
         self.deberta = AutoModel.from_pretrained(
-            "microsoft/deberta-v2-xxlarge", config=config
+            "microsoft/deberta-v3-large", config=config
         )
 
         # Enhanced GCN modules based on configuration

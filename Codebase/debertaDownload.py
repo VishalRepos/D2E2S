@@ -21,7 +21,7 @@ def download_file(url, filename):
 
 
 def download_deberta_model(
-    model_name="microsoft/deberta-v2-xxlarge", save_path="./deberta-v3-base"
+    model_name="microsoft/deberta-v3-large", save_path="./deberta-v3-base"
 ):
     base_url = f"https://huggingface.co/{model_name}/resolve/main/"
     files_to_download = [

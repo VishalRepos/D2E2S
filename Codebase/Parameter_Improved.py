@@ -92,10 +92,10 @@ def train_argparser_improved():
         "--use_gated", default=False, help="Do use gcnconv and gatedgraphconv."
     )
     parser.add_argument(
-        "--hidden_dim", type=int, default=768, help="hidden layer dimension."
+        "--hidden_dim", type=int, default=512, help="hidden layer dimension."
     )
     parser.add_argument(
-        "--emb_dim", type=int, default=1536, help="Word embedding dimension."
+        "--emb_dim", type=int, default=1024, help="Word embedding dimension."
     )
     parser.add_argument(
         "--lstm_layers", type=int, default=2, help="Number of LSTM layers."
@@ -125,7 +125,7 @@ def train_argparser_improved():
     parser.add_argument(
         "--deberta_feature_dim",
         type=int,
-        default=1536,
+        default=1024,
         help="dimension of pretrained deberta feature",
     )
     parser.add_argument(
@@ -232,7 +232,7 @@ def train_argparser_improved():
         help="Log training process every x iterations",
     )
     parser.add_argument(
-        "--pretrained_deberta_name", default="microsoft/deberta-v2-xxlarge", type=str
+        "--pretrained_deberta_name", default="microsoft/deberta-v3-large", type=str
     )
     parser.add_argument(
         "--weight_decay", type=float, default=0.01, help="Weight decay to apply"
