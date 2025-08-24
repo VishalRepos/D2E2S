@@ -395,7 +395,29 @@ class ImprovedD2E2S_Trainer(BaseTrainer):
 
 
 if __name__ == "__main__":
-    arg_parser = train_argparser_improved()
+    import argparse
+    
+    # Parse command line arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--param_file", type=str, help="Path to parameter file for hyperparameter tuning")
+    parser.add_argument("--trial_log_dir", type=str, help="Directory for trial-specific logs")
+    args, unknown = parser.parse_known_args()
+    
+    # If param_file is provided, import from that file
+    if args.param_file and os.path.exists(args.param_file):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("trial_params", args.param_file)
+        trial_params = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(trial_params)
+        arg_parser = trial_params.train_argparser_improved()
+        
+        # Override log path if trial_log_dir is provided
+        if args.trial_log_dir:
+            arg_parser.log_path = args.trial_log_dir
+    else:
+        # Use default parameters
+        arg_parser = train_argparser_improved()
+    
     trainer = ImprovedD2E2S_Trainer(arg_parser)
     trainer._train(
         train_path=arg_parser.dataset_file["train"],
