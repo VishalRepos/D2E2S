@@ -65,32 +65,25 @@ class SimpleHyperparameterTuner:
             }
     
     def _generate_random_variations(self):
-        """Generate random variations of the base parameter combinations with no duplicates"""
+        """Generate completely random parameter combinations with no duplicates"""
         
         import random
         
-        # Get search spaces from config for better randomization
+        # Get search spaces from config for randomization
         search_spaces = self.config.get('search_spaces', {})
         
         # Track used combinations to avoid duplicates
         used_combinations = set()
         
-        # Add existing predefined combinations to used set
-        for combo in self.parameter_combinations:
-            combo_key = self._get_combination_key(combo)
-            used_combinations.add(combo_key)
-        
-        for i in range(len(self.parameter_combinations), self.n_trials):
+        # Generate all trials randomly since no predefined combinations exist
+        for i in range(self.n_trials):
             attempts = 0
             max_attempts = 100  # Prevent infinite loops
             
             while attempts < max_attempts:
-                # Pick a base combination
-                base = random.choice(self.parameter_combinations[:3]).copy()
-                
-                # Generate new random parameters using search spaces
-                new_params = self._generate_random_params(search_spaces, base)
-                new_params['description'] = f'Random variation {i+1}'
+                # Generate completely random parameters from scratch
+                new_params = self._generate_random_params_from_scratch(search_spaces)
+                new_params['description'] = f'Random trial {i+1}'
                 
                 # Check if this combination is unique
                 combo_key = self._get_combination_key(new_params)
@@ -104,9 +97,10 @@ class SimpleHyperparameterTuner:
             
             if attempts >= max_attempts:
                 print(f"Warning: Could not generate unique combination for trial {i+1} after {max_attempts} attempts")
-                # Fallback: use base combination with slight modification
-                base['description'] = f'Fallback variation {i+1}'
-                self.parameter_combinations.append(base)
+                # Fallback: generate with slight modification
+                fallback_params = self._generate_random_params_from_scratch(search_spaces)
+                fallback_params['description'] = f'Fallback trial {i+1}'
+                self.parameter_combinations.append(fallback_params)
     
     def _generate_random_params(self, search_spaces, base_params):
         """Generate random parameters using search spaces configuration"""
@@ -208,6 +202,72 @@ class SimpleHyperparameterTuner:
         
         if 'use_graph_attention' in search_spaces and search_spaces['use_graph_attention']['type'] == 'categorical':
             new_params['use_graph_attention'] = random.choice(search_spaces['use_graph_attention']['values'])
+        
+        return new_params
+    
+    def _generate_random_params_from_scratch(self, search_spaces):
+        """Generate completely random parameters from scratch - only most important ones"""
+        
+        import random
+        
+        new_params = {}
+        
+        # Generate categorical parameters (Critical)
+        if 'batch_size' in search_spaces and search_spaces['batch_size']['type'] == 'categorical':
+            new_params['batch_size'] = random.choice(search_spaces['batch_size']['values'])
+        
+        if 'gcn_type' in search_spaces and search_spaces['gcn_type']['type'] == 'categorical':
+            new_params['gcn_type'] = random.choice(search_spaces['gcn_type']['values'])
+        
+        if 'attention_heads' in search_spaces and search_spaces['attention_heads']['type'] == 'categorical':
+            new_params['attention_heads'] = random.choice(search_spaces['attention_heads']['values'])
+        
+        if 'max_pairs' in search_spaces and search_spaces['max_pairs']['type'] == 'categorical':
+            new_params['max_pairs'] = random.choice(search_spaces['max_pairs']['values'])
+        
+        # Generate integer parameters (Critical)
+        if 'gcn_layers' in search_spaces and search_spaces['gcn_layers']['type'] == 'int':
+            new_params['gcn_layers'] = random.randint(
+                search_spaces['gcn_layers']['low'], 
+                search_spaces['gcn_layers']['high']
+            )
+        
+        if 'epochs' in search_spaces and search_spaces['epochs']['type'] == 'int':
+            new_params['epochs'] = random.randint(
+                search_spaces['epochs']['low'], 
+                search_spaces['epochs']['high']
+            )
+        
+        # Generate float parameters (Critical)
+        if 'lr' in search_spaces and search_spaces['lr']['type'] == 'float':
+            if search_spaces['lr'].get('log', False):
+                new_params['lr'] = random.uniform(
+                    search_spaces['lr']['low'], 
+                    search_spaces['lr']['high']
+                )
+            else:
+                new_params['lr'] = random.uniform(
+                    search_spaces['lr']['low'], 
+                    search_spaces['lr']['high']
+                )
+        
+        # Set proven default values for DeBERTa-v2-XXLarge
+        new_params['lr_warmup'] = 0.15  # Conservative for XXLarge
+        new_params['weight_decay'] = 0.01  # Standard regularization
+        new_params['max_grad_norm'] = 1.0  # Stable for XXLarge
+        new_params['hidden_dim'] = 1536  # Match XXLarge feature dim
+        new_params['gcn_dim'] = 768  # Optimized for XXLarge
+        new_params['max_span_size'] = 6  # Memory efficient for XXLarge
+        new_params['neg_entity_count'] = 50  # Reduced for XXLarge memory
+        new_params['neg_triple_count'] = 50  # Reduced for XXLarge memory
+        new_params['use_residual'] = True  # Proven for XXLarge
+        new_params['use_layer_norm'] = True  # Essential for XXLarge
+        new_params['use_multi_scale'] = True  # Proven for XXLarge
+        new_params['use_graph_attention'] = True  # Proven for XXLarge
+        new_params['drop_out_rate'] = 0.3  # Conservative for XXLarge
+        new_params['gcn_dropout'] = 0.1  # Conservative for XXLarge
+        new_params['prop_drop'] = 0.05  # Conservative for XXLarge
+        new_params['sen_filter_threshold'] = 0.5  # Balanced for XXLarge
         
         return new_params
     

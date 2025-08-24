@@ -80,8 +80,34 @@ python train_improved.py --dataset 14res --gcn_type improved --attention_heads 8
 
 ## 🎛️ Hyperparameter Tuning
 
+### Smart Randomization System for DeBERTa-v2-XXLarge
+- **Only most relevant parameters** are randomized for XXLarge efficiency
+- **Critical parameters**: batch_size, lr, gcn_type, gcn_layers, attention_heads, max_pairs
+- **Other parameters** use proven XXLarge-optimized default values
+- **No duplicate combinations** guaranteed
+- **Fixed epochs**: All trials use exactly **70 epochs**
+
+### Parameters Being Tuned (XXLarge Optimized)
+- **`batch_size`**: [4, 6, 8] - Memory optimization for XXLarge
+- **`lr`**: [1e-5, 3e-5] - Conservative learning rate for XXLarge stability
+- **`gcn_type`**: ['improved', 'gatv2', 'hybrid'] - Most proven for XXLarge
+- **`gcn_layers`**: [2, 4] - Optimized for XXLarge efficiency
+- **`attention_heads`**: [8, 12] - Memory-optimized for XXLarge
+- **`max_pairs`**: [400, 600, 800] - XXLarge memory optimized
+
+### Default Values (XXLarge Optimized)
+- **`epochs`**: 70 (fixed for all trials)
+- **`hidden_dim`**: 1536 (matches XXLarge features), **`gcn_dim`**: 768 (XXLarge optimized)
+- **`use_residual`**: True, **`use_layer_norm`**: True (essential for XXLarge)
+- **`drop_out_rate`**: 0.3, **`gcn_dropout`**: 0.1 (conservative for XXLarge)
+- **`max_span_size`**: 6, **`neg_entity_count`**: 50 (memory efficient for XXLarge)
+
 ### Quick Test
 ```bash
+# Preview combinations first
+python simple_hyperparameter_tuner.py --dataset 14res --n_trials 3 --preview
+
+# Then run optimization
 python simple_hyperparameter_tuner.py --dataset 14res --n_trials 3
 ```
 
@@ -92,7 +118,16 @@ python simple_hyperparameter_tuner.py --dataset 14res --n_trials 20
 
 ### Custom Configuration
 ```bash
-python simple_hyperparameter_tuner.py --dataset 14res --n_trials 20
+python simple_hyperparameter_tuner.py --dataset 15res --n_trials 30 --config my_config.py
+```
+
+### Preview Without Running
+```bash
+# Preview 3 trial combinations
+python simple_hyperparameter_tuner.py --dataset 14res --n_trials 3 --preview
+
+# Preview 20 trial combinations
+python simple_hyperparameter_tuner.py --dataset 14res --n_trials 20 --preview
 ```
 
 ## 📊 Supported Datasets
@@ -105,7 +140,9 @@ python simple_hyperparameter_tuner.py --dataset 14res --n_trials 20
 ## 🚨 Important Notes
 
 - **GPU Memory**: Requires 24GB+ GPU memory for DeBERTa-v2-XXLarge
-- **Training Time**: Each hyperparameter trial takes ~30 minutes
+- **Training Time**: Each hyperparameter trial takes ~15-20 minutes (70 epochs)
+- **Epochs**: All trials use exactly **70 epochs** for consistent training
+- **Randomization**: Completely random parameter combinations for maximum exploration
 - **Results**: Hyperparameter results saved in `hyperparameter_results/` directory
 
 ## 🐛 Troubleshooting

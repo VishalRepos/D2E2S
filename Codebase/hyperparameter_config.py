@@ -13,176 +13,56 @@ TIMEOUT = 7200  # 2 hours in seconds
 N_STARTUP_TRIALS = 5  # Random trials before TPE
 N_WARMUP_STEPS = 10  # Warmup steps for pruner
 
-# Search Spaces for Critical Parameters
+# Search Spaces for DeBERTa-v2-XXLarge - Most Relevant Parameters Only
 SEARCH_SPACES = {
-    # Training Parameters (Most Important)
+    # Training Parameters (Critical for XXLarge)
     'batch_size': {
         'type': 'categorical',
-        'values': [4, 6, 8, 10, 12],
-        'description': 'Training batch size for memory optimization'
+        'values': [4, 6, 8],  # Reduced for XXLarge memory constraints
+        'description': 'Training batch size for DeBERTa-v2-XXLarge memory optimization'
     },
     
     'lr': {
         'type': 'float',
         'low': 1e-5,
-        'high': 5e-5,
+        'high': 3e-5,  # Reduced range for XXLarge stability
         'log': True,
-        'description': 'Learning rate for DeBERTa-v2-XXLarge'
+        'description': 'Learning rate for DeBERTa-v2-XXLarge (conservative range)'
     },
     
-    'lr_warmup': {
-        'type': 'float',
-        'low': 0.1,
-        'high': 0.3,
-        'description': 'Learning rate warmup proportion'
-    },
-    
-    'weight_decay': {
-        'type': 'float',
-        'low': 0.001,
-        'high': 0.05,
-        'log': True,
-        'description': 'Weight decay for regularization'
-    },
-    
-    'max_grad_norm': {
-        'type': 'float',
-        'low': 0.5,
-        'high': 2.0,
-        'description': 'Maximum gradient norm for clipping'
-    },
-    
-    # Model Architecture
-    'hidden_dim': {
+    # GCN Architecture (Most Impactful)
+    'gcn_type': {
         'type': 'categorical',
-        'values': [768, 1024, 1536],
-        'description': 'Hidden layer dimension'
-    },
-    
-    'gcn_dim': {
-        'type': 'categorical',
-        'values': [256, 384, 512, 768],
-        'description': 'GCN layer dimension'
+        'values': ['improved', 'gatv2', 'hybrid'],  # Most proven for XXLarge
+        'description': 'GCN type optimized for DeBERTa-v2-XXLarge'
     },
     
     'gcn_layers': {
         'type': 'int',
-        'low': 3,
-        'high': 6,
-        'description': 'Number of GCN layers'
+        'low': 2,
+        'high': 4,  # Reduced for XXLarge efficiency
+        'description': 'Number of GCN layers (optimized for XXLarge)'
     },
     
     'attention_heads': {
         'type': 'categorical',
-        'values': [8, 12, 16],
-        'description': 'Number of attention heads'
+        'values': [8, 12],  # Reduced for XXLarge memory
+        'description': 'Attention heads (memory-optimized for XXLarge)'
     },
     
-    'lstm_layers': {
-        'type': 'int',
-        'low': 1,
-        'high': 3,
-        'description': 'Number of LSTM layers'
-    },
-    
-    'lstm_dim': {
-        'type': 'categorical',
-        'values': [256, 384, 512],
-        'description': 'LSTM cell dimension'
-    },
-    
-    # Memory Optimization
-    'max_span_size': {
-        'type': 'int',
-        'low': 5,
-        'high': 8,
-        'description': 'Maximum span size for memory efficiency'
-    },
-    
+    # Memory Management (Critical for XXLarge)
     'max_pairs': {
         'type': 'categorical',
-        'values': [400, 600, 800, 1000],
-        'description': 'Maximum entity pairs to process'
+        'values': [400, 600, 800],  # Reduced for XXLarge memory
+        'description': 'Max entity pairs (XXLarge memory optimized)'
     },
     
-    'neg_entity_count': {
-        'type': 'categorical',
-        'values': [50, 75, 100],
-        'description': 'Negative entity samples count'
-    },
-    
-    'neg_triple_count': {
-        'type': 'categorical',
-        'values': [50, 75, 100],
-        'description': 'Negative triple samples count'
-    },
-    
-    # GCN Architecture
-    'gcn_type': {
-        'type': 'categorical',
-        'values': ['improved', 'gatv2', 'hybrid', 'dynamic'],
-        'description': 'Type of GCN to use'
-    },
-    
-    'use_residual': {
-        'type': 'categorical',
-        'values': [True, False],
-        'description': 'Use residual connections'
-    },
-    
-    'use_layer_norm': {
-        'type': 'categorical',
-        'values': [True, False],
-        'description': 'Use layer normalization'
-    },
-    
-    'use_multi_scale': {
-        'type': 'categorical',
-        'values': [True, False],
-        'description': 'Use multi-scale feature aggregation'
-    },
-    
-    'use_graph_attention': {
-        'type': 'categorical',
-        'values': [True, False],
-        'description': 'Use graph attention mechanism'
-    },
-    
-    # Regularization
-    'drop_out_rate': {
-        'type': 'float',
-        'low': 0.3,
-        'high': 0.7,
-        'description': 'Main dropout rate'
-    },
-    
-    'gcn_dropout': {
-        'type': 'float',
-        'low': 0.1,
-        'high': 0.4,
-        'description': 'GCN-specific dropout'
-    },
-    
-    'prop_drop': {
-        'type': 'float',
-        'low': 0.05,
-        'high': 0.2,
-        'description': 'D2E2S dropout probability'
-    },
-    
-    # Training Strategy
+    # Fixed Training Strategy
     'epochs': {
         'type': 'int',
-        'low': 80,
-        'high': 120,
-        'description': 'Number of training epochs'
-    },
-    
-    'sen_filter_threshold': {
-        'type': 'float',
-        'low': 0.3,
-        'high': 0.6,
-        'description': 'Sentiment filter threshold'
+        'low': 70,
+        'high': 70,
+        'description': 'Fixed epochs for consistent XXLarge training'
     }
 }
 
@@ -219,131 +99,8 @@ VISUALIZATION = {
     'plot_contour': True
 }
 
-# Predefined Parameter Combinations for Quick Start
-PREDEFINED_COMBINATIONS = [
-    # Conservative settings (memory-efficient)
-    {
-        'batch_size': 4,
-        'lr': 1e-5,
-        'lr_warmup': 0.15,
-        'weight_decay': 0.01,
-        'max_grad_norm': 1.0,
-        'hidden_dim': 768,
-        'gcn_dim': 384,
-        'gcn_layers': 3,
-        'attention_heads': 8,
-        'max_span_size': 6,
-        'max_pairs': 600,
-        'neg_entity_count': 75,
-        'neg_triple_count': 75,
-        'gcn_type': 'improved',
-        'use_residual': True,
-        'use_layer_norm': True,
-        'drop_out_rate': 0.5,
-        'gcn_dropout': 0.2,
-        'epochs': 100,
-        'description': 'Conservative memory-efficient settings'
-    },
-    
-    # Balanced settings
-    {
-        'batch_size': 6,
-        'lr': 2e-5,
-        'lr_warmup': 0.2,
-        'weight_decay': 0.01,
-        'max_grad_norm': 1.0,
-        'hidden_dim': 1024,
-        'gcn_dim': 512,
-        'gcn_layers': 4,
-        'attention_heads': 12,
-        'max_span_size': 7,
-        'max_pairs': 800,
-        'neg_entity_count': 75,
-        'neg_triple_count': 75,
-        'gcn_type': 'gatv2',
-        'use_residual': True,
-        'use_layer_norm': True,
-        'drop_out_rate': 0.4,
-        'gcn_dropout': 0.15,
-        'epochs': 100,
-        'description': 'Balanced performance settings'
-    },
-    
-    # Performance-focused settings
-    {
-        'batch_size': 8,
-        'lr': 3e-5,
-        'lr_warmup': 0.25,
-        'weight_decay': 0.005,
-        'max_grad_norm': 0.8,
-        'hidden_dim': 1536,
-        'gcn_dim': 768,
-        'gcn_layers': 5,
-        'attention_heads': 16,
-        'max_span_size': 8,
-        'max_pairs': 1000,
-        'neg_entity_count': 100,
-        'neg_triple_count': 100,
-        'gcn_type': 'hybrid',
-        'use_residual': True,
-        'use_layer_norm': True,
-        'drop_out_rate': 0.3,
-        'gcn_dropout': 0.1,
-        'epochs': 120,
-        'description': 'Performance-focused settings'
-    },
-    
-    # GATv2 focused
-    {
-        'batch_size': 6,
-        'lr': 2e-5,
-        'lr_warmup': 0.2,
-        'weight_decay': 0.01,
-        'max_grad_norm': 1.0,
-        'hidden_dim': 1024,
-        'gcn_dim': 512,
-        'gcn_layers': 4,
-        'attention_heads': 12,
-        'max_span_size': 7,
-        'max_pairs': 800,
-        'neg_entity_count': 75,
-        'neg_triple_count': 75,
-        'gcn_type': 'gatv2',
-        'use_residual': True,
-        'use_layer_norm': True,
-        'use_multi_scale': True,
-        'use_graph_attention': True,
-        'drop_out_rate': 0.4,
-        'gcn_dropout': 0.15,
-        'epochs': 100,
-        'description': 'GATv2 with multi-scale attention'
-    },
-    
-    # Dynamic GCN settings
-    {
-        'batch_size': 6,
-        'lr': 2e-5,
-        'lr_warmup': 0.2,
-        'weight_decay': 0.01,
-        'max_grad_norm': 1.0,
-        'hidden_dim': 1024,
-        'gcn_dim': 512,
-        'gcn_layers': 4,
-        'attention_heads': 12,
-        'max_span_size': 7,
-        'max_pairs': 800,
-        'neg_entity_count': 75,
-        'neg_triple_count': 75,
-        'gcn_type': 'dynamic',
-        'use_residual': True,
-        'use_layer_norm': True,
-        'use_adaptive_edges': True,
-        'drop_out_rate': 0.4,
-        'gcn_dropout': 0.15,
-        'epochs': 100,
-        'description': 'Dynamic GCN with adaptive edges'
-    }
-]
+# Random Parameter Generation (No predefined combinations)
+PREDEFINED_COMBINATIONS = []
 
 # Function to get configuration
 def get_config():
