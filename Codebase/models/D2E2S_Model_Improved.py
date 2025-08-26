@@ -68,12 +68,15 @@ class ImprovedD2E2SModel(PreTrainedModel):
         )
 
         # Enhanced GCN modules based on configuration
+        # Calculate the actual input dimension for GCN (LSTM output dimension)
+        gcn_input_dim = self._hidden_dim * 2 if self._is_bidirectional else self._hidden_dim
+        
         if hasattr(self.args, 'gcn_type') and self.args.gcn_type == "adaptive":
-            self.Syn_gcn = AdaptiveGCN(emb_dim=self._emb_dim, num_layers=self.args.gcn_layers, gcn_dropout=self.gcn_dropout)
+            self.Syn_gcn = AdaptiveGCN(emb_dim=gcn_input_dim, num_layers=self.args.gcn_layers, gcn_dropout=self.gcn_dropout)
         else:
-            self.Syn_gcn = ImprovedGCN(emb_dim=self._emb_dim, num_layers=self.args.gcn_layers, gcn_dropout=self.gcn_dropout)
+            self.Syn_gcn = ImprovedGCN(emb_dim=gcn_input_dim, num_layers=self.args.gcn_layers, gcn_dropout=self.gcn_dropout)
             
-        self.Sem_gcn = ImprovedSemGCN(self.args, emb_dim=self._emb_dim, num_layers=self.args.gcn_layers, gcn_dropout=self.gcn_dropout)
+        self.Sem_gcn = ImprovedSemGCN(self.args, emb_dim=gcn_input_dim, num_layers=self.args.gcn_layers, gcn_dropout=self.gcn_dropout)
         
         self.senti_classifier = nn.Linear(
             config.hidden_size * 3 + self._size_embedding * 2, sentiment_types
