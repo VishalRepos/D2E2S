@@ -255,7 +255,7 @@ class SimpleHyperparameterTuner:
         new_params['lr_warmup'] = 0.15  # Conservative for XXLarge
         new_params['weight_decay'] = 0.01  # Standard regularization
         new_params['max_grad_norm'] = 1.0  # Stable for XXLarge
-        new_params['hidden_dim'] = 1536  # Match XXLarge feature dim
+        new_params['hidden_dim'] = 768  # Half of emb_dim for bidirectional LSTM
         new_params['gcn_dim'] = 768  # Optimized for XXLarge
         new_params['max_span_size'] = 6  # Memory efficient for XXLarge
         new_params['neg_entity_count'] = 50  # Reduced for XXLarge memory

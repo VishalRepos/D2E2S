@@ -97,7 +97,7 @@ python train_improved.py --dataset 14res --gcn_type improved --attention_heads 8
 
 ### Default Values (XXLarge Optimized)
 - **`epochs`**: 70 (fixed for all trials)
-- **`hidden_dim`**: 1536 (matches XXLarge features), **`gcn_dim`**: 768 (XXLarge optimized)
+- **`hidden_dim`**: 768 (half of emb_dim for bidirectional LSTM), **`gcn_dim`**: 768 (XXLarge optimized)
 - **`use_residual`**: True, **`use_layer_norm`**: True (essential for XXLarge)
 - **`drop_out_rate`**: 0.3, **`gcn_dropout`**: 0.1 (conservative for XXLarge)
 - **`max_span_size`**: 6, **`neg_entity_count`**: 50 (memory efficient for XXLarge)
