@@ -67,6 +67,28 @@ SEARCH_SPACES = {
     }
 }
 
+# Additional fixed parameters for DeBERTa-v2-XXLarge
+FIXED_PARAMS = {
+    'emb_dim': 1536,  # DeBERTa-v2-XXLarge feature dimension
+    'hidden_dim': 768,  # Half of emb_dim for bidirectional LSTM
+    'deberta_feature_dim': 1536,  # DeBERTa-v2-XXLarge output dimension
+    'gcn_dim': 768,  # Optimized for XXLarge
+    'max_span_size': 6,  # Memory efficient for XXLarge
+    'neg_entity_count': 50,  # Reduced for XXLarge memory
+    'neg_triple_count': 50,  # Reduced for XXLarge memory
+    'use_residual': True,  # Proven for XXLarge
+    'use_layer_norm': True,  # Essential for XXLarge
+    'use_multi_scale': True,  # Proven for XXLarge
+    'use_graph_attention': True,  # Proven for XXLarge
+    'drop_out_rate': 0.3,  # Conservative for XXLarge
+    'gcn_dropout': 0.1,  # Conservative for XXLarge
+    'prop_drop': 0.05,  # Conservative for XXLarge
+    'sen_filter_threshold': 0.5,  # Balanced for XXLarge
+    'lr_warmup': 0.15,  # Conservative for XXLarge
+    'weight_decay': 0.01,  # Standard regularization
+    'max_grad_norm': 1.0,  # Stable for XXLarge
+}
+
 # Dataset Configuration
 DATASETS = ["14res", "15res", "16res", "14lap"]
 

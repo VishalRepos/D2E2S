@@ -68,15 +68,25 @@ class ImprovedD2E2SModel(PreTrainedModel):
         )
 
         # Enhanced GCN modules based on configuration
-        # Calculate the actual input dimension for GCN (LSTM output dimension)
-        gcn_input_dim = self._hidden_dim * 2 if self._is_bidirectional else self._hidden_dim
+        # Calculate dimensions for different inputs
+        deberta_dim = self._emb_dim  # DeBERTa output dimension (1536)
+        lstm_dim = self._hidden_dim * 2 if self._is_bidirectional else self._hidden_dim  # LSTM output dimension (3072)
         
+        # GCN for DeBERTa features (original)
         if hasattr(self.args, 'gcn_type') and self.args.gcn_type == "adaptive":
-            self.Syn_gcn = AdaptiveGCN(emb_dim=gcn_input_dim, num_layers=self.args.gcn_layers, gcn_dropout=self.gcn_dropout)
+            self.Syn_gcn_ori = AdaptiveGCN(emb_dim=deberta_dim, num_layers=self.args.gcn_layers, gcn_dropout=self.gcn_dropout)
         else:
-            self.Syn_gcn = ImprovedGCN(emb_dim=gcn_input_dim, num_layers=self.args.gcn_layers, gcn_dropout=self.gcn_dropout)
+            self.Syn_gcn_ori = ImprovedGCN(emb_dim=deberta_dim, num_layers=self.args.gcn_layers, gcn_dropout=self.gcn_dropout)
             
-        self.Sem_gcn = ImprovedSemGCN(self.args, emb_dim=gcn_input_dim, num_layers=self.args.gcn_layers, gcn_dropout=self.gcn_dropout)
+        # GCN for LSTM features (enhanced)
+        if hasattr(self.args, 'gcn_type') and self.args.gcn_type == "adaptive":
+            self.Syn_gcn = AdaptiveGCN(emb_dim=lstm_dim, num_layers=self.args.gcn_layers, gcn_dropout=self.gcn_dropout)
+        else:
+            self.Syn_gcn = ImprovedGCN(emb_dim=lstm_dim, num_layers=self.args.gcn_layers, gcn_dropout=self.gcn_dropout)
+            
+        # Semantic GCN modules
+        self.Sem_gcn_ori = ImprovedSemGCN(self.args, emb_dim=deberta_dim, num_layers=self.args.gcn_layers, gcn_dropout=self.gcn_dropout)
+        self.Sem_gcn = ImprovedSemGCN(self.args, emb_dim=lstm_dim, num_layers=self.args.gcn_layers, gcn_dropout=self.gcn_dropout)
         
         self.senti_classifier = nn.Linear(
             config.hidden_size * 3 + self._size_embedding * 2, sentiment_types
@@ -185,12 +195,12 @@ class ImprovedD2E2SModel(PreTrainedModel):
         self.deberta_lstm_att_feature = self.deberta_lstm_output
 
         # Enhanced GCN processing
-        h_syn_ori, pool_mask_origin = self.Syn_gcn(adj, h)
-        h_syn_gcn, pool_mask = self.Syn_gcn(adj, self.deberta_lstm_att_feature)
-        h_sem_ori, adj_sem_ori = self.Sem_gcn(h, encodings, seq_lens)
+        h_syn_ori, pool_mask_origin = self.Syn_gcn_ori(adj, h)  # DeBERTa features
+        h_syn_gcn, pool_mask = self.Syn_gcn(adj, self.deberta_lstm_att_feature)  # LSTM features
+        h_sem_ori, adj_sem_ori = self.Sem_gcn_ori(h, encodings, seq_lens)  # DeBERTa features
         h_sem_gcn, adj_sem_gcn = self.Sem_gcn(
             self.deberta_lstm_att_feature, encodings, seq_lens
-        )
+        )  # LSTM features
 
         # Enhanced fusion layer
         h1 = self.TIN(
@@ -251,12 +261,12 @@ class ImprovedD2E2SModel(PreTrainedModel):
         self.deberta_lstm_att_feature = self.deberta_lstm_output
 
         # Enhanced GCN processing
-        h_syn_ori, pool_mask_origin = self.Syn_gcn(adj, h)
-        h_syn_gcn, pool_mask = self.Syn_gcn(adj, self.deberta_lstm_att_feature)
-        h_sem_ori, adj_sem_ori = self.Sem_gcn(h, encodings, seq_lens)
+        h_syn_ori, pool_mask_origin = self.Syn_gcn_ori(adj, h)  # DeBERTa features
+        h_syn_gcn, pool_mask = self.Syn_gcn(adj, self.deberta_lstm_att_feature)  # LSTM features
+        h_sem_ori, adj_sem_ori = self.Sem_gcn_ori(h, encodings, seq_lens)  # DeBERTa features
         h_sem_gcn, adj_sem_gcn = self.Sem_gcn(
             self.deberta_lstm_att_feature, encodings, seq_lens
-        )
+        )  # LSTM features
 
         # Enhanced fusion layer
         h1 = self.TIN(
