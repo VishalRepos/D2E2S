@@ -33,7 +33,8 @@ SEARCH_SPACES = {
     # GCN Architecture (Most Impactful)
     'gcn_type': {
         'type': 'categorical',
-        'values': ['improved', 'gatv2', 'hybrid'],  # Most proven for XXLarge
+        # 'values': ['improved', 'gatv2', 'hybrid'],  # Most proven for XXLarge
+        'values': ['hybrid'],  # Most proven for XXLarge
         'description': 'GCN type optimized for DeBERTa-v2-XXLarge'
     },
     
@@ -60,8 +61,8 @@ SEARCH_SPACES = {
     # Fixed Training Strategy
     'epochs': {
         'type': 'int',
-        'low': 70,
-        'high': 70,
+        'low': 40,
+        'high': 40,
         'description': 'Fixed epochs for consistent XXLarge training'
     }
 }
