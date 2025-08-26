@@ -14,11 +14,11 @@ python simple_hyperparameter_tuner.py --dataset 14res --n_trials 5 --preview
 # 🚀 Usage Examples
 ```
 # Test 3 unique combinations
-python simple_hyperparameter_tuner.py --dataset 14res --n_trials 3
+python simple_hyperparameter_tuner.py --dataset 14res --n_trials 3 --verbose
 
 # Test 20 unique combinations  
-python simple_hyperparameter_tuner.py --dataset 14res --n_trials 20
+python simple_hyperparameter_tuner.py --dataset 14res --n_trials 20 --verbose
 
 # Test 50 unique combinations
-python simple_hyperparameter_tuner.py --dataset 14res --n_trials 50
+python simple_hyperparameter_tuner.py --dataset 14res --n_trials 50 --verbose
 ```

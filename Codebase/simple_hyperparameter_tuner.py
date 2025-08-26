@@ -16,9 +16,10 @@ import sys
 warnings.filterwarnings("ignore")
 
 class SimpleHyperparameterTuner:
-    def __init__(self, dataset="14res", n_trials=20, config_file="hyperparameter_config.py"):
+    def __init__(self, dataset="14res", n_trials=20, config_file="hyperparameter_config.py", verbose=False):
         self.dataset = dataset
         self.n_trials = n_trials
+        self.verbose = verbose
         self.results_dir = Path("hyperparameter_results")
         self.results_dir.mkdir(exist_ok=True)
         
@@ -398,13 +399,26 @@ class SimpleHyperparameterTuner:
                 "--trial_log_dir", str(trial_log_dir)
             ]
             
+            # Run with real-time output
+            print(f"Starting training for trial {trial_num}...")
             result = subprocess.run(
                 cmd,
-                capture_output=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
                 text=True,
                 timeout=1800,  # 30 minutes timeout
-                cwd=os.getcwd()
+                cwd=os.getcwd(),
+                bufsize=1,
+                universal_newlines=True
             )
+            
+            # Print real-time output during training if verbose mode
+            if self.verbose:
+                print("Training Output:")
+                print(result.stdout)
+                if result.stderr:
+                    print("Training Errors:")
+                    print(result.stderr)
             
             if result.returncode != 0:
                 print(f"Training failed with return code: {result.returncode}")
@@ -650,6 +664,8 @@ def main():
                        help="Path to Python configuration file")
     parser.add_argument("--preview", action="store_true", 
                        help="Preview parameter combinations without running optimization")
+    parser.add_argument("--verbose", action="store_true", 
+                       help="Show detailed epoch-by-epoch training progress")
     
     args = parser.parse_args()
     
@@ -657,7 +673,8 @@ def main():
     tuner = SimpleHyperparameterTuner(
         dataset=args.dataset, 
         n_trials=args.n_trials,
-        config_file=args.config
+        config_file=args.config,
+        verbose=args.verbose
     )
     
     if args.preview:
