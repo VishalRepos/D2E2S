@@ -518,8 +518,8 @@ def train_argparser_improved():
     parser.add_argument("--seed", default=42, type=int, help="Random seed")
     parser.add_argument("--max_span_size", type=int, default={params['max_span_size']}, help="Max span size")
     parser.add_argument("--lowercase", action="store_true", default=True, help="Case sensitive training")
-         parser.add_argument("--max_pairs", type=int, default={params['max_pairs']}, help="Max entity pairs")
-     parser.add_argument("--sen_filter_threshold", type=float, default={params['sen_filter_threshold']}, help="Sentiment filter threshold")
+    parser.add_argument("--max_pairs", type=int, default={params['max_pairs']}, help="Max entity pairs")
+    parser.add_argument("--sen_filter_threshold", type=float, default={params['sen_filter_threshold']}, help="Sentiment filter threshold")
     parser.add_argument("--sampling_limit", type=int, default=100, help="Max samples in queue")
     parser.add_argument("--neg_entity_count", type=int, default={params['neg_entity_count']}, help="Negative entity count")
     parser.add_argument("--neg_triple_count", type=int, default={params['neg_triple_count']}, help="Negative triple count")
@@ -527,7 +527,7 @@ def train_argparser_improved():
     parser.add_argument("--cpu", action="store_true", default=False, help="Use CPU even if CUDA available")
     parser.add_argument("--size_embedding", type=int, default=25, help="Dimensionality of size embedding")
     parser.add_argument("--sampling_processes", type=int, default=4, help="Number of sampling processes")
-         parser.add_argument("--prop_drop", type=float, default={params['prop_drop']}, help="D2E2S dropout")
+    parser.add_argument("--prop_drop", type=float, default={params['prop_drop']}, help="D2E2S dropout")
     parser.add_argument("--freeze_transformer", action="store_true", default=False, help="Freeze transformer parameters")
     
     # Optimization parameters
