@@ -387,6 +387,11 @@ class SimpleHyperparameterTuner:
         param_file = self.results_dir / f"trial_{trial_num}_params.py"
         self._create_parameter_file(param_file, params)
         
+        # Debug: Check if parameter file exists
+        if not param_file.exists():
+            print(f"ERROR: Parameter file {param_file} was not created!")
+            return -1.0
+        
         try:
             # Create trial log directory
             trial_log_dir = self.results_dir / f"trial_{trial_num}"
@@ -398,6 +403,11 @@ class SimpleHyperparameterTuner:
                 "--param_file", str(param_file),
                 "--trial_log_dir", str(trial_log_dir)
             ]
+            
+            # Debug: Print the command being executed
+            print(f"Executing command: {' '.join(cmd)}")
+            print(f"Parameter file: {param_file}")
+            print(f"Parameter file exists: {param_file.exists()}")
             
             # Run with real-time output
             print(f"Starting training for trial {trial_num}...")
@@ -422,7 +432,8 @@ class SimpleHyperparameterTuner:
             
             if result.returncode != 0:
                 print(f"Training failed with return code: {result.returncode}")
-                print(f"STDERR: {result.stderr}")
+                print("Full training output:")
+                print(result.stdout)
                 return -1.0
             
             # Extract score
@@ -507,8 +518,8 @@ def train_argparser_improved():
     parser.add_argument("--seed", default=42, type=int, help="Random seed")
     parser.add_argument("--max_span_size", type=int, default={params['max_span_size']}, help="Max span size")
     parser.add_argument("--lowercase", action="store_true", default=True, help="Case sensitive training")
-    parser.add_argument("--max_pairs", type=int, default={params['max_pairs']}, help="Max entity pairs")
-    parser.add_argument("--sen_filter_threshold", type=float, default=0.4, help="Sentiment filter threshold")
+         parser.add_argument("--max_pairs", type=int, default={params['max_pairs']}, help="Max entity pairs")
+     parser.add_argument("--sen_filter_threshold", type=float, default={params['sen_filter_threshold']}, help="Sentiment filter threshold")
     parser.add_argument("--sampling_limit", type=int, default=100, help="Max samples in queue")
     parser.add_argument("--neg_entity_count", type=int, default={params['neg_entity_count']}, help="Negative entity count")
     parser.add_argument("--neg_triple_count", type=int, default={params['neg_triple_count']}, help="Negative triple count")
@@ -516,7 +527,7 @@ def train_argparser_improved():
     parser.add_argument("--cpu", action="store_true", default=False, help="Use CPU even if CUDA available")
     parser.add_argument("--size_embedding", type=int, default=25, help="Dimensionality of size embedding")
     parser.add_argument("--sampling_processes", type=int, default=4, help="Number of sampling processes")
-    parser.add_argument("--prop_drop", type=float, default=0.1, help="D2E2S dropout")
+         parser.add_argument("--prop_drop", type=float, default={params['prop_drop']}, help="D2E2S dropout")
     parser.add_argument("--freeze_transformer", action="store_true", default=False, help="Freeze transformer parameters")
     
     # Optimization parameters
