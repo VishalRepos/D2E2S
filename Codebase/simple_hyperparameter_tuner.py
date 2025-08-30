@@ -326,10 +326,10 @@ class SimpleHyperparameterTuner:
     def run_optimization(self):
         """Run the hyperparameter optimization"""
         
-        print(f"Starting hyperparameter optimization for DeBERTa-v2-XXLarge")
-        print(f"Dataset: {self.dataset}")
-        print(f"Number of trials: {self.n_trials}")
-        print(f"Results directory: {self.results_dir}")
+        print(f"🚀 Starting hyperparameter optimization for DeBERTa-v2-XXLarge")
+        print(f"📊 Dataset: {self.dataset}")
+        print(f"🎯 Number of trials: {self.n_trials}")
+        print(f"📁 Results directory: {self.results_dir}")
         print("="*60)
         
         results = []
@@ -337,11 +337,28 @@ class SimpleHyperparameterTuner:
         best_params = None
         
         for trial_num, params in enumerate(self.parameter_combinations[:self.n_trials]):
-            print(f"\nTRIAL {trial_num + 1}/{self.n_trials}")
-            print(f"Description: {params['description']}")
-            print(f"Parameters: {json.dumps({k: v for k, v in params.items() if k != 'description'}, indent=2)}")
+            print(f"\n{'='*60}")
+            print(f"🎯 TRIAL {trial_num + 1}/{self.n_trials}")
+            print(f"📝 Description: {params['description']}")
+            print(f"🏆 Current Best Score: {best_score:.4f}")
+            print(f"{'='*60}")
+            
+            # Show key parameters in a more readable format
+            key_params = {
+                'batch_size': params['batch_size'],
+                'lr': params['lr'],
+                'epochs': params['epochs'],
+                'gcn_type': params['gcn_type'],
+                'gcn_layers': params['gcn_layers'],
+                'attention_heads': params['attention_heads']
+            }
+            print(f"🔧 Key Parameters: {key_params}")
+            print("-" * 40)
             
             try:
+                # Record trial start time
+                trial_start_time = time.time()
+                
                 # Run training trial
                 score = self._run_training_trial(params, trial_num + 1)
                 
@@ -358,12 +375,15 @@ class SimpleHyperparameterTuner:
                 if score > best_score:
                     best_score = score
                     best_params = params
+                    print(f"🎉 NEW BEST SCORE! Trial {trial_num + 1}: {score:.4f}")
+                else:
+                    print(f"📊 Trial {trial_num + 1} completed with score: {score:.4f}")
                 
-                print(f"Trial {trial_num + 1} completed with score: {score:.4f}")
-                print(f"Best score so far: {best_score:.4f}")
+                print(f"🏆 Best score so far: {best_score:.4f}")
+                print(f"⏱️  Trial {trial_num + 1} completed in {time.time() - trial_start_time:.1f} seconds")
                 
             except Exception as e:
-                print(f"Trial {trial_num + 1} failed: {str(e)}")
+                print(f"❌ Trial {trial_num + 1} failed: {str(e)}")
                 results.append({
                     'trial_number': trial_num + 1,
                     'params': params,
@@ -375,6 +395,9 @@ class SimpleHyperparameterTuner:
             # Save intermediate results
             self._save_results(results, best_score, best_params)
             
+            # Show progress
+            completed_trials = len(results)
+            print(f"📈 Progress: {completed_trials}/{self.n_trials} trials completed")
             print("-" * 40)
         
         # Final summary
@@ -410,34 +433,75 @@ class SimpleHyperparameterTuner:
             print(f"Parameter file exists: {param_file.exists()}")
             
             # Run with real-time output
-            print(f"Starting training for trial {trial_num}...")
-            result = subprocess.run(
+            print(f"🚀 Starting training for trial {trial_num}...")
+            print("="*60)
+            print("📊 Training Progress (Real-time):")
+            print("-" * 40)
+            
+            # Use Popen to get real-time output
+            process = subprocess.Popen(
                 cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,
-                timeout=1800,  # 30 minutes timeout
-                cwd=os.getcwd(),
                 bufsize=1,
-                universal_newlines=True
+                universal_newlines=True,
+                cwd=os.getcwd()
             )
             
-            # Print real-time output during training if verbose mode
-            if self.verbose:
-                print("Training Output:")
-                print(result.stdout)
-                if result.stderr:
-                    print("Training Errors:")
-                    print(result.stderr)
+            # Collect output in real-time
+            output_lines = []
+            start_time = time.time()
+            timeout_seconds = 1800  # 30 minutes timeout
             
-            if result.returncode != 0:
-                print(f"Training failed with return code: {result.returncode}")
-                print("Full training output:")
-                print(result.stdout)
+            try:
+                while True:
+                    # Check for timeout
+                    if time.time() - start_time > timeout_seconds:
+                        print(f"\nTraining timeout after {timeout_seconds} seconds")
+                        process.terminate()
+                        return -1.0
+                    
+                    # Try to read output with a small timeout
+                    try:
+                        output = process.stdout.readline()
+                        if output == '' and process.poll() is not None:
+                            break
+                        if output:
+                            output_lines.append(output.strip())
+                            # Always print real-time output for training progress
+                            print(output.strip())
+                    except:
+                        # If no output available, check if process is still running
+                        if process.poll() is not None:
+                            break
+                        time.sleep(0.1)  # Small delay to prevent busy waiting
+                
+                # Wait for process to complete
+                return_code = process.wait()
+                
+            except KeyboardInterrupt:
+                print("\nTraining interrupted by user...")
+                process.terminate()
                 return -1.0
             
+            # Check if training was successful
+            if return_code != 0:
+                print(f"❌ Training failed with return code: {return_code}")
+                print("Full training output:")
+                print(full_output)
+                return -1.0
+            
+            print("-" * 40)
+            print(f"✅ Training completed for trial {trial_num}")
+            
             # Extract score
-            score = self._extract_score(result.stdout)
+            score = self._extract_score(full_output)
+            
+            if score > 0:
+                print(f"📊 Extracted F1 Score: {score:.4f}")
+            else:
+                print(f"⚠️  Could not extract F1 score from output")
             
             return score
             
@@ -568,12 +632,33 @@ def train_argparser_improved():
         
         try:
             lines = output.split('\n')
-            for line in lines:
-                if "Best F1 score:" in line:
-                    score_str = line.split("Best F1 score:")[1].split("at")[0].strip()
-                    return float(score_str)
             
-            # Try to extract from log files
+            # Try multiple patterns to extract F1 score
+            patterns = [
+                "Best F1 score:",
+                "Best F1 Score:",
+                "F1 score:",
+                "F1 Score:",
+                "mic_f1_score:",
+                "mic_f1_score':"
+            ]
+            
+            for line in lines:
+                for pattern in patterns:
+                    if pattern in line:
+                        try:
+                            # Extract the score after the pattern
+                            if pattern in line:
+                                score_part = line.split(pattern)[1]
+                                # Clean up the score part
+                                score_str = score_part.split()[0].strip().strip("'").strip('"')
+                                # Remove any trailing characters
+                                score_str = score_str.split(',')[0].split(')')[0].split('}')[0]
+                                return float(score_str)
+                        except (ValueError, IndexError):
+                            continue
+            
+            # Try to extract from log files as fallback
             return self._extract_score_from_logs()
             
         except Exception as e:
@@ -650,19 +735,33 @@ def train_argparser_improved():
         """Print final optimization summary"""
         
         print(f"\n{'='*60}")
-        print(f"OPTIMIZATION COMPLETED")
+        print(f"🎉 OPTIMIZATION COMPLETED! 🎉")
         print(f"{'='*60}")
-        print(f"Dataset: {self.dataset}")
-        print(f"Total Trials: {len(results)}")
-        print(f"Best F1 Score: {best_score:.4f}")
+        print(f"📊 Dataset: {self.dataset}")
+        print(f"🎯 Total Trials: {len(results)}")
+        print(f"🏆 Best F1 Score: {best_score:.4f}")
+        
+        # Calculate success rate
+        successful_trials = len([r for r in results if r['score'] > 0])
+        success_rate = (successful_trials / len(results)) * 100 if results else 0
+        print(f"✅ Success Rate: {success_rate:.1f}% ({successful_trials}/{len(results)} trials)")
         
         if best_params:
-            print(f"\nBest Parameters:")
-            for key, value in best_params.items():
-                if key != 'description':
-                    print(f"  {key}: {value}")
+            print(f"\n🏆 Best Parameters:")
+            # Group parameters by category
+            training_params = {k: v for k, v in best_params.items() if k in ['batch_size', 'lr', 'lr_warmup', 'weight_decay', 'epochs']}
+            model_params = {k: v for k, v in best_params.items() if k in ['hidden_dim', 'gcn_dim', 'gcn_layers', 'attention_heads']}
+            gcn_params = {k: v for k, v in best_params.items() if k in ['gcn_type', 'use_residual', 'use_layer_norm', 'use_multi_scale']}
+            
+            if training_params:
+                print(f"  🚀 Training: {training_params}")
+            if model_params:
+                print(f"  🏗️  Model: {model_params}")
+            if gcn_params:
+                print(f"  🌐 GCN: {gcn_params}")
         
-        print(f"\nResults saved to: {self.results_dir}")
+        print(f"\n📁 Results saved to: {self.results_dir}")
+        print(f"📄 Summary files: optimization_summary.json, optimization_summary.txt")
         print(f"{'='*60}\n")
 
 
