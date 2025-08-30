@@ -631,7 +631,6 @@ def train_argparser_improved():
     parser.add_argument("--final_eval", action="store_true", default=False, help="Evaluate only after training")
     parser.add_argument("--store_predictions", action="store_true", default=True, help="Store predictions")
     parser.add_argument("--store_examples", action="store_true", default=True, help="Store examples")
-    parser.add_argument("--train_log_iter", type=int, default=1, help="Log training every x iterations")
     parser.add_argument("--example_count", type=int, default=None, help="Count of evaluation examples")
     parser.add_argument("--save_path", type=str, default="data/save/", help="Model checkpoint path")
     parser.add_argument("--save_optimizer", action="store_true", default=False, help="Save optimizer")
