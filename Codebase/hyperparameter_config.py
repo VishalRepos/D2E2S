@@ -24,8 +24,8 @@ SEARCH_SPACES = {
     
     'lr': {
         'type': 'float',
-        'low': 1e-5,
-        'high': 3e-5,  # Reduced range for XXLarge stability
+        'low': 1e-6,
+        'high': 3e-6,  # Reduced range for XXLarge stability
         'log': True,
         'description': 'Learning rate for DeBERTa-v2-XXLarge (conservative range)'
     },
