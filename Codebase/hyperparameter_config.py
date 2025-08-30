@@ -84,7 +84,7 @@ FIXED_PARAMS = {
     'gcn_dropout': 0.1,  # Conservative for XXLarge
     'prop_drop': 0.05,  # Conservative for XXLarge
     'sen_filter_threshold': 0.5,  # Balanced for XXLarge
-    'lr_warmup': 0.15,  # Conservative for XXLarge
+    'lr_warmup': 0.2,  # Conservative for XXLarge
     'weight_decay': 0.01,  # Standard regularization
     'max_grad_norm': 1.0,  # Stable for XXLarge
 }
