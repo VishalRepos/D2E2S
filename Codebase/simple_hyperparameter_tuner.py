@@ -384,6 +384,7 @@ class SimpleHyperparameterTuner:
                 
             except Exception as e:
                 print(f"❌ Trial {trial_num + 1} failed: {str(e)}")
+                print(f"🔍 Error details: {type(e).__name__}: {str(e)}")
                 results.append({
                     'trial_number': trial_num + 1,
                     'params': params,
@@ -471,6 +472,10 @@ class SimpleHyperparameterTuner:
                             output_lines.append(output.strip())
                             # Always print real-time output for training progress
                             print(output.strip())
+                            
+                            # Highlight evaluation results
+                            if any(keyword in output for keyword in ['Evaluate epoch', 'No. ', 'ner_entity:', 'rec:', 'mic_f1_score:']):
+                                print(f"🔍 EVALUATION: {output.strip()}")
                     except:
                         # If no output available, check if process is still running
                         if process.poll() is not None:
@@ -489,17 +494,33 @@ class SimpleHyperparameterTuner:
             if return_code != 0:
                 print(f"❌ Training failed with return code: {return_code}")
                 print("Full training output:")
-                print(full_output)
+                print('\n'.join(output_lines))
                 return -1.0
             
             print("-" * 40)
             print(f"✅ Training completed for trial {trial_num}")
             
-            # Extract score
-            score = self._extract_score(full_output)
+            # Extract and display detailed results
+            score, detailed_results = self._extract_detailed_results('\n'.join(output_lines))
+            
+            # Display the detailed evaluation results
+            if detailed_results:
+                print(f"\n📊 EVALUATION RESULTS for Trial {trial_num}:")
+                print("="*50)
+                for result in detailed_results:
+                    print(result)
+                print("="*50)
+            
+            # Also show the final summary from the training script
+            final_summary = self._extract_final_summary('\n'.join(output_lines))
+            if final_summary:
+                print(f"\n🏁 FINAL TRAINING SUMMARY:")
+                print("="*50)
+                print(final_summary)
+                print("="*50)
             
             if score > 0:
-                print(f"📊 Extracted F1 Score: {score:.4f}")
+                print(f"🏆 Final Best F1 Score: {score:.4f}")
             else:
                 print(f"⚠️  Could not extract F1 score from output")
             
@@ -610,6 +631,7 @@ def train_argparser_improved():
     parser.add_argument("--final_eval", action="store_true", default=False, help="Evaluate only after training")
     parser.add_argument("--store_predictions", action="store_true", default=True, help="Store predictions")
     parser.add_argument("--store_examples", action="store_true", default=True, help="Store examples")
+    parser.add_argument("--train_log_iter", type=int, default=1, help="Log training every x iterations")
     parser.add_argument("--example_count", type=int, default=None, help="Count of evaluation examples")
     parser.add_argument("--save_path", type=str, default="data/save/", help="Model checkpoint path")
     parser.add_argument("--save_optimizer", action="store_true", default=False, help="Save optimizer")
@@ -627,14 +649,46 @@ def train_argparser_improved():
         with open(param_file, 'w') as f:
             f.write(param_content)
     
-    def _extract_score(self, output):
-        """Extract F1 score from training output"""
+    def _extract_detailed_results(self, output):
+        """Extract detailed evaluation results and F1 score from training output"""
         
         try:
             lines = output.split('\n')
+            detailed_results = []
+            best_score = -1.0
+            
+            # Look for evaluation results patterns
+            evaluation_patterns = [
+                "No. ",
+                "ner_entity:",
+                "rec:",
+                "mic_precision:",
+                "mic_recall:",
+                "mic_f1_score:",
+                "mac_precision:",
+                "mac_recall:",
+                "mac_f1_score:"
+            ]
+            
+            # Collect detailed evaluation results
+            for i, line in enumerate(lines):
+                line = line.strip()
+                
+                # Look for evaluation result blocks
+                if any(pattern in line for pattern in evaluation_patterns):
+                    # Get the context around this line (previous and next few lines)
+                    start_idx = max(0, i - 2)
+                    end_idx = min(len(lines), i + 3)
+                    context_lines = lines[start_idx:end_idx]
+                    
+                    # Add meaningful evaluation lines
+                    for ctx_line in context_lines:
+                        ctx_line = ctx_line.strip()
+                        if ctx_line and any(pattern in ctx_line for pattern in evaluation_patterns):
+                            detailed_results.append(ctx_line)
             
             # Try multiple patterns to extract F1 score
-            patterns = [
+            score_patterns = [
                 "Best F1 score:",
                 "Best F1 Score:",
                 "F1 score:",
@@ -644,26 +698,60 @@ def train_argparser_improved():
             ]
             
             for line in lines:
-                for pattern in patterns:
+                for pattern in score_patterns:
                     if pattern in line:
                         try:
                             # Extract the score after the pattern
-                            if pattern in line:
-                                score_part = line.split(pattern)[1]
-                                # Clean up the score part
-                                score_str = score_part.split()[0].strip().strip("'").strip('"')
-                                # Remove any trailing characters
-                                score_str = score_str.split(',')[0].split(')')[0].split('}')[0]
-                                return float(score_str)
+                            score_part = line.split(pattern)[1]
+                            # Clean up the score part
+                            score_str = score_part.split()[0].strip().strip("'").strip('"')
+                            # Remove any trailing characters
+                            score_str = score_str.split(',')[0].split(')')[0].split('}')[0]
+                            score = float(score_str)
+                            if score > best_score:
+                                best_score = score
                         except (ValueError, IndexError):
                             continue
             
-            # Try to extract from log files as fallback
-            return self._extract_score_from_logs()
+            # If no detailed results found, try to extract from log files
+            if not detailed_results:
+                best_score = self._extract_score_from_logs()
+            
+            return best_score, detailed_results
             
         except Exception as e:
-            print(f"Error extracting score: {str(e)}")
-            return -1.0
+            print(f"Error extracting detailed results: {str(e)}")
+            return -1.0, []
+    
+    def _extract_score(self, output):
+        """Extract F1 score from training output (legacy method)"""
+        score, _ = self._extract_detailed_results(output)
+        return score
+    
+    def _extract_final_summary(self, output):
+        """Extract the final summary from training output"""
+        try:
+            lines = output.split('\n')
+            summary_lines = []
+            
+            # Look for the final summary pattern
+            for i, line in enumerate(lines):
+                if "Best F1 score:" in line and "at epoch" in line:
+                    # Get the final summary line
+                    summary_lines.append(line.strip())
+                    # Also get the line before if it exists
+                    if i > 0:
+                        summary_lines.insert(0, lines[i-1].strip())
+                    break
+            
+            if summary_lines:
+                return '\n'.join(summary_lines)
+            else:
+                return None
+                
+        except Exception as e:
+            print(f"Error extracting final summary: {str(e)}")
+            return None
     
     def _extract_score_from_logs(self):
         """Extract score from log files"""

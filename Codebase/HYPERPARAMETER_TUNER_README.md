@@ -73,12 +73,12 @@ This will run just 2 trials to verify everything works correctly.
    - Use Graph Attention: True
    
    Train epoch 0: 100%|██████████| 50/50 [02:30<00:00,  3.33it/s]
-   Evaluate epoch 1: 100%|██████████| 12/12 [00:15<00:00,  1.25it/s]
-   No. 1 ：....
-   ner_entity: 
-   {'mic_precision': 0.0, 'mic_recall': 0.0, 'mic_f1_score': 0.0, ...}
-   rec: 
-   {'mic_precision': 0.8234, 'mic_recall': 0.7891, 'mic_f1_score': 0.8059, ...}
+   🔍 EVALUATION: Evaluate epoch 1: 100%|██████████| 12/12 [00:15<00:00,  1.25it/s]
+   🔍 EVALUATION: No. 1 ：....
+   🔍 EVALUATION: ner_entity: 
+   🔍 EVALUATION: {'mic_precision': 0.0, 'mic_recall': 0.0, 'mic_f1_score': 0.0, ...}
+   🔍 EVALUATION: rec: 
+   🔍 EVALUATION: {'mic_precision': 0.8234, 'mic_recall': 0.7891, 'mic_f1_score': 0.8059, ...}
    
    Train epoch 1: 100%|██████████| 50/50 [02:28<00:00,  3.37it/s]
    ...
@@ -87,7 +87,20 @@ This will run just 2 trials to verify everything works correctly.
 
 ----------------------------------------
 ✅ Training completed for trial 1
-📊 Extracted F1 Score: 0.8234
+
+📊 EVALUATION RESULTS for Trial 1:
+==================================================
+No. 1 ：....
+ner_entity: 
+{'mic_precision': 0.0, 'mic_recall': 0.0, 'mic_f1_score': 0.0, ...}
+rec: 
+{'mic_precision': 0.8234, 'mic_recall': 0.7891, 'mic_f1_score': 0.8059, ...}
+
+🏁 FINAL TRAINING SUMMARY:
+==================================================
+Best F1 score: 0.8234 at epoch 5
+
+🏆 Final Best F1 Score: 0.8234
 🎉 NEW BEST SCORE! Trial 1: 0.8234
 🏆 Best score so far: 0.8234
 ⏱️  Trial 1 completed in 125.3 seconds
