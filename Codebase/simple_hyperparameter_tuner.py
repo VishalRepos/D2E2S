@@ -9,6 +9,7 @@ import os
 import json
 import time
 import warnings
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -367,7 +368,9 @@ class SimpleHyperparameterTuner:
                     'trial_number': trial_num + 1,
                     'params': params,
                     'score': score,
-                    'timestamp': time.time()
+                    'timestamp': time.time(),
+                    'is_best': (score > best_score) if score > 0 else False,
+                    'description': params.get('description', f'Trial {trial_num + 1}')
                 }
                 results.append(trial_result)
                 
@@ -390,7 +393,9 @@ class SimpleHyperparameterTuner:
                     'params': params,
                     'score': -1.0,
                     'error': str(e),
-                    'timestamp': time.time()
+                    'timestamp': time.time(),
+                    'is_best': False,
+                    'description': params.get('description', f'Trial {trial_num + 1}')
                 })
             
             # Save intermediate results
@@ -500,6 +505,19 @@ class SimpleHyperparameterTuner:
             print("-" * 40)
             print(f"✅ Training completed for trial {trial_num}")
             
+            # Debug: Show what we captured
+            print(f"\n🔍 DEBUG: Captured {len(output_lines)} lines of output")
+            print("Last 10 lines of output:")
+            for i, line in enumerate(output_lines[-10:]):
+                print(f"  {len(output_lines)-10+i+1}: {line}")
+            
+            # Also show lines containing key evaluation keywords
+            print(f"\n🔍 Lines containing evaluation keywords:")
+            evaluation_keywords = ['Evaluate', 'No.', 'ner_entity', 'rec:', 'mic_f1_score', 'Best F1 score']
+            for i, line in enumerate(output_lines):
+                if any(keyword in line for keyword in evaluation_keywords):
+                    print(f"  {i+1}: {line}")
+            
             # Extract and display detailed results
             score, detailed_results = self._extract_detailed_results('\n'.join(output_lines))
             
@@ -523,6 +541,10 @@ class SimpleHyperparameterTuner:
                 print(f"🏆 Final Best F1 Score: {score:.4f}")
             else:
                 print(f"⚠️  Could not extract F1 score from output")
+                print(f"🔍 Raw output for debugging:")
+                print("="*50)
+                print('\n'.join(output_lines))
+                print("="*50)
             
             return score
             
@@ -656,70 +678,53 @@ def train_argparser_improved():
             detailed_results = []
             best_score = -1.0
             
-            # Look for evaluation results patterns
-            evaluation_patterns = [
-                "No. ",
-                "ner_entity:",
-                "rec:",
-                "mic_precision:",
-                "mic_recall:",
-                "mic_f1_score:",
-                "mac_precision:",
-                "mac_recall:",
-                "mac_f1_score:"
-            ]
-            
-            # Collect detailed evaluation results
-            for i, line in enumerate(lines):
-                line = line.strip()
-                
-                # Look for evaluation result blocks
-                if any(pattern in line for pattern in evaluation_patterns):
-                    # Get the context around this line (previous and next few lines)
-                    start_idx = max(0, i - 2)
-                    end_idx = min(len(lines), i + 3)
-                    context_lines = lines[start_idx:end_idx]
-                    
-                    # Add meaningful evaluation lines
-                    for ctx_line in context_lines:
-                        ctx_line = ctx_line.strip()
-                        if ctx_line and any(pattern in ctx_line for pattern in evaluation_patterns):
-                            detailed_results.append(ctx_line)
-            
-            # Try multiple patterns to extract F1 score
+            # Look for the final F1 score that train_improved.py actually prints
             score_patterns = [
                 "Best F1 score:",
                 "Best F1 Score:",
                 "F1 score:",
                 "F1 Score:",
-                "mic_f1_score:",
-                "mic_f1_score':"
+                "🏆 Best F1 score:"  # New pattern from updated train_improved.py
             ]
             
+            # First, try to extract the final F1 score from the output
             for line in lines:
+                line = line.strip()
                 for pattern in score_patterns:
                     if pattern in line:
                         try:
                             # Extract the score after the pattern
                             score_part = line.split(pattern)[1]
-                            # Clean up the score part
-                            score_str = score_part.split()[0].strip().strip("'").strip('"')
-                            # Remove any trailing characters
-                            score_str = score_str.split(',')[0].split(')')[0].split('}')[0]
-                            score = float(score_str)
-                            if score > best_score:
-                                best_score = score
-                        except (ValueError, IndexError):
+                            # Clean up the score part - look for the number
+                            import re
+                            score_match = re.search(r'([0-9]*\.?[0-9]+)', score_part)
+                            if score_match:
+                                score_str = score_match.group(1)
+                                score = float(score_str)
+                                if score > best_score:
+                                    best_score = score
+                                    print(f"🔍 Found F1 score: {score} from line: {line}")
+                        except (ValueError, IndexError) as e:
+                            print(f"⚠️  Error parsing score from '{line}': {e}")
                             continue
             
-            # If no detailed results found, try to extract from log files
-            if not detailed_results:
+            # If we found a score, also collect evaluation-related lines for context
+            if best_score > 0:
+                for line in lines:
+                    line = line.strip()
+                    # Look for evaluation-related patterns that are actually printed
+                    if any(keyword in line for keyword in ['Evaluate epoch', 'No. ', 'ner_entity:', 'rec:', 'mic_f1_score:', 'mac_f1_score:']):
+                        detailed_results.append(line)
+            
+            # If still no score found, try to extract from log files
+            if best_score <= 0:
+                print("⚠️  No F1 score found in output, trying log files...")
                 best_score = self._extract_score_from_logs()
             
             return best_score, detailed_results
             
         except Exception as e:
-            print(f"Error extracting detailed results: {str(e)}")
+            print(f"❌ Error extracting detailed results: {str(e)}")
             return -1.0, []
     
     def _extract_score(self, output):
@@ -756,28 +761,56 @@ def train_argparser_improved():
         """Extract score from log files"""
         
         try:
-            log_dirs = list(Path("log").glob("*/result*.txt"))
-            if not log_dirs:
-                return -1.0
+            # Look for result files in the current trial's log directory
+            trial_log_dirs = list(Path("hyperparameter_results").glob("trial_*/result*.txt"))
+            if not trial_log_dirs:
+                # Fallback to general log directory
+                log_dirs = list(Path("log").glob("*/result*.txt"))
+                if not log_dirs:
+                    print("⚠️  No result files found in log directories")
+                    return -1.0
+                latest_result = max(log_dirs, key=lambda x: x.stat().st_mtime)
+            else:
+                # Use the most recent trial result file
+                latest_result = max(trial_log_dirs, key=lambda x: x.stat().st_mtime)
             
-            latest_result = max(log_dirs, key=lambda x: x.stat().st_mtime)
+            print(f"🔍 Looking for scores in: {latest_result}")
             
             with open(latest_result, 'r') as f:
                 content = f.read()
+                print(f"📄 Log file content preview: {content[:200]}...")
+                
+                # Look for F1 score patterns in the log file
                 if "mic_f1_score" in content:
                     lines = content.split('\n')
                     for line in lines:
                         if "mic_f1_score" in line:
                             try:
-                                score_str = line.split(":")[1].strip().strip("'")
-                                return float(score_str)
-                            except:
+                                # Extract the F1 score value
+                                score_match = re.search(r"'mic_f1_score':\s*([0-9]*\.?[0-9]+)", line)
+                                if score_match:
+                                    score_str = score_match.group(1)
+                                    score = float(score_str)
+                                    print(f"🔍 Found F1 score in log: {score}")
+                                    return score
+                            except Exception as e:
+                                print(f"⚠️  Error parsing log line '{line}': {e}")
                                 continue
+                
+                # Also try to find the best F1 score mentioned in the file
+                if "Best F1 score:" in content:
+                    score_match = re.search(r'Best F1 score:\s*([0-9]*\.?[0-9]+)', content)
+                    if score_match:
+                        score_str = score_match.group(1)
+                        score = float(score_str)
+                        print(f"🔍 Found Best F1 score in log: {score}")
+                        return score
             
+            print("⚠️  No F1 score found in log files")
             return -1.0
             
         except Exception as e:
-            print(f"Error extracting score from logs: {str(e)}")
+            print(f"❌ Error extracting score from logs: {str(e)}")
             return -1.0
     
     def _save_results(self, results, best_score, best_params):
@@ -788,7 +821,8 @@ def train_argparser_improved():
             'total_trials': len(results),
             'best_score': best_score,
             'best_params': best_params,
-            'trials': results
+            'trials': results,
+            'timestamp': time.time()
         }
         
         # Save JSON
@@ -803,7 +837,8 @@ def train_argparser_improved():
             f.write(f"{'='*50}\n\n")
             f.write(f"Dataset: {self.dataset}\n")
             f.write(f"Total Trials: {len(results)}\n")
-            f.write(f"Best Score: {best_score:.4f}\n\n")
+            f.write(f"Best Score: {best_score:.4f}\n")
+            f.write(f"Timestamp: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}\n\n")
             
             if best_params:
                 f.write(f"Best Parameters:\n")
@@ -812,10 +847,23 @@ def train_argparser_improved():
                         f.write(f"  {key}: {value}\n")
             
             f.write(f"\nTrial Results:\n")
+            f.write(f"{'='*50}\n")
             for trial in results:
-                f.write(f"  Trial {trial['trial_number']}: {trial['score']:.4f}")
+                f.write(f"Trial {trial['trial_number']}:\n")
+                f.write(f"  Score: {trial['score']:.4f}")
+                if trial.get('is_best', False):
+                    f.write(f" 🏆 (BEST)")
+                f.write(f"\n")
                 if 'error' in trial:
-                    f.write(f" (Error: {trial['error']})")
+                    f.write(f"  Error: {trial['error']}\n")
+                f.write(f"  Timestamp: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(trial['timestamp']))}\n")
+                f.write(f"  Key Parameters:\n")
+                if 'params' in trial:
+                    params = trial['params']
+                    key_params = ['batch_size', 'lr', 'epochs', 'gcn_type', 'gcn_layers', 'attention_heads']
+                    for param in key_params:
+                        if param in params:
+                            f.write(f"    {param}: {params[param]}\n")
                 f.write(f"\n")
     
     def _print_final_summary(self, results, best_score, best_params):

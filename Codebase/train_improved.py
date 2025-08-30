@@ -322,6 +322,9 @@ class ImprovedD2E2S_Trainer(BaseTrainer):
     def _log_filter_file(self, ner_eval, senti_eval, evaluator, epoch):
         f1 = float(senti_eval[2])
         if self.max_pair_f1 < f1:
+            # Print when we find a new best score
+            print(f"🎉 NEW BEST F1 SCORE! Epoch {epoch}: {f1:.4f} (Previous: {self.max_pair_f1:.4f})")
+            
             columns = [
                 "mic_precision",
                 "mic_recall",
@@ -372,6 +375,9 @@ class ImprovedD2E2S_Trainer(BaseTrainer):
 
             if self.args.store_examples:
                 evaluator.store_examples()
+        else:
+            # Print current epoch score for debugging
+            print(f"📊 Epoch {epoch} F1: {f1:.4f} (Best: {self.max_pair_f1:.4f})")
 
     def _get_optimizer_params(self, model):
         param_optimizer = list(model.named_parameters())
@@ -426,4 +432,9 @@ if __name__ == "__main__":
         input_reader_cls=JsonInputReader,
     )
     # Print the best F1 score and epoch after training
-    print(f"\nBest F1 score: {trainer.max_pair_f1} at epoch {trainer.best_epoch}\n") 
+    print(f"\n{'='*60}")
+    print(f"🏁 TRAINING COMPLETED!")
+    print(f"📊 Dataset: {arg_parser.dataset}")
+    print(f"🏆 Best F1 score: {trainer.max_pair_f1:.4f} at epoch {trainer.best_epoch}")
+    print(f"📁 Results saved to: {arg_parser.log_path}")
+    print(f"{'='*60}\n") 
