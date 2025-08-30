@@ -33,8 +33,18 @@ def train_argparser():
         "--dataset", default="14res", type=str, help="14res, 15res, 16res, 14lap"
     )
 
+    # Enhanced GCN parameters (from best hyperparameter optimization)
+    parser.add_argument("--use_improved_gcn", default=True, help="Use improved GCN modules")
+    parser.add_argument("--gcn_type", default="hybrid", help="Type of GCN to use")
+    parser.add_argument("--use_residual", default=True, help="Use residual connections")
+    parser.add_argument("--use_layer_norm", default=True, help="Use layer normalization")
+    parser.add_argument("--use_multi_scale", default=True, help="Use multi-scale features")
+    parser.add_argument("--use_graph_attention", default=True, help="Use graph attention mechanism")
+    parser.add_argument("--use_relative_position", default=True, help="Use relative position encoding")
+    parser.add_argument("--use_global_context", default=True, help="Use global context modeling")
+
     parser.add_argument(
-        "--drop_out_rate", type=float, default=0.5, help="drop out rate."
+        "--drop_out_rate", type=float, default=0.3, help="drop out rate."
     )
     parser.add_argument("--is_bidirect", default=True, help="Do use bi-RNN layer.")
     parser.add_argument(
@@ -63,17 +73,17 @@ def train_argparser():
         help="option: Max, Average",
     )
     parser.add_argument(
-        "--attention_heads", default=1, type=int, help="number of multi-attention heads"
+        "--attention_heads", default=8, type=int, help="number of multi-attention heads"
     )
     parser.add_argument("--num_layers", type=int, default=2, help="Num of GCN layers.")
     parser.add_argument(
         "--mem_dim", type=int, default=768, help="mutual biaffine men dim."
     )
     parser.add_argument(
-        "--gcn_dropout", type=float, default=0.2, help="GCN layer dropout rate."
+        "--gcn_dropout", type=float, default=0.1, help="GCN layer dropout rate."
     )
     parser.add_argument("--pooling", default="avg", type=str, help="[max, avg, sum]")
-    parser.add_argument("--gcn_dim", type=int, default=300, help="dimension of gcn")
+    parser.add_argument("--gcn_dim", type=int, default=768, help="dimension of gcn")
     parser.add_argument(
         "--deberta_feature_dim",
         type=int,
@@ -85,7 +95,7 @@ def train_argparser():
     )
 
     parser.add_argument(
-        "--max_span_size", type=int, default=8, help="Maximum size of spans"
+        "--max_span_size", type=int, default=6, help="Maximum size of spans"
     )
     parser.add_argument(
         "--lowercase",
@@ -96,13 +106,13 @@ def train_argparser():
     parser.add_argument(
         "--max_pairs",
         type=int,
-        default=1000,
+        default=800,
         help="During training and evaluation, the maximum number of entity pairs will be processed",
     )
     parser.add_argument(
         "--sen_filter_threshold",
         type=float,
-        default=0.4,
+        default=0.5,
         help="Filter threshold for sentiment triplet",
     )
     parser.add_argument(
@@ -114,13 +124,13 @@ def train_argparser():
     parser.add_argument(
         "--neg_entity_count",
         type=int,
-        default=100,
+        default=50,
         help="The number of negative entities samples for each sample",
     )
     parser.add_argument(
         "--neg_triple_count",
         type=int,
-        default=100,
+        default=50,
         help="The number of negative triplets samples for each sample",
     )
 
@@ -151,7 +161,7 @@ def train_argparser():
     parser.add_argument(
         "--prop_drop",
         type=float,
-        default=0.1,
+        default=0.05,
         help="Probability of dropout used in D2E2S",
     )
     parser.add_argument(
@@ -161,14 +171,14 @@ def train_argparser():
         help="Freezing Bert's parameters for easy test",
     )
     parser.add_argument(
-        "--batch_size", type=int, default=16, help="Training batch size"
+        "--batch_size", type=int, default=8, help="Training batch size"
     )
     parser.add_argument("--epochs", type=int, default=120, help="Number of epochs")
-    parser.add_argument("--lr", type=float, default=5e-5, help="Learning rate")
+    parser.add_argument("--lr", type=float, default=1.71e-6, help="Learning rate")
     parser.add_argument(
         "--lr_warmup",
         type=float,
-        default=0.1,
+        default=0.15,
         help="Proportion of total train iterations to warmup in linear increase/decrease schedule",
     )
     parser.add_argument(
