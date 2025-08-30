@@ -1,0 +1,71 @@
+# Hyperparameter Results Gitignore
+# Exclude large files and temporary results while keeping important summaries
+
+# Exclude all trial directories (they contain large files)
+trial_*/
+
+# Exclude Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Exclude large model files and checkpoints
+*.pt
+*.pth
+*.ckpt
+*.bin
+*.safetensors
+
+# Exclude TensorBoard event files
+*.tfevents
+events.out.tfevents*
+
+# Exclude large CSV files with training logs
+loss_*.csv
+lr_*.csv
+*_train.csv
+*_test.csv
+
+# Exclude prediction and result files (can be regenerated)
+predict/
+result/
+*.html
+
+# Exclude large log files
+*.log
+log/
+
+# Exclude temporary and intermediate files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# Exclude OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Exclude IDE files
+.vscode/
+.idea/
+*.sublime-*
+
+# Keep important summary files
+!optimization_summary.json
+!optimization_summary.txt
+!trial_*_params.py
+
+# Keep README and documentation
+!README.md
+!*.md
+
+
+/hyperparameter_results
