@@ -216,7 +216,7 @@ def train_argparser_improved():
     parser.add_argument(
         "--lr_warmup",
         type=float,
-        default=0.15,
+        default=0.2,
         help="Proportion of total train iterations to warmup in linear increase/decrease schedule",
     )
     parser.add_argument(
