@@ -1,0 +1,16 @@
+{
+  "best_value": -1.0,
+  "best_params": {
+    "batch_size": 8,
+    "lr": 1.4357652831772478e-05,
+    "lr_warmup": 0,
+    "weight_decay": 0,
+    "gcn_type": "improved",
+    "gcn_layers": 3,
+    "attention_heads": 8,
+    "epochs": 23
+  },
+  "n_trials": 1,
+  "study_name": "d2e2s_14res_quick_1759891754",
+  "dataset": "14res"
+}

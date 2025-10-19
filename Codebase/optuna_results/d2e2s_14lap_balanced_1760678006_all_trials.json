@@ -1,0 +1,85 @@
+[
+  {
+    "number": 0,
+    "value": 0.7734183566504407,
+    "params": {
+      "batch_size": 16,
+      "lr": 0.0002026,
+      "lr_warmup": 0,
+      "weight_decay": 0.0002975,
+      "gcn_type": "hybrid",
+      "gcn_layers": 2,
+      "attention_heads": 8,
+      "hidden_dim": 768,
+      "gcn_dim": 512,
+      "epochs": 112
+    },
+    "state": "COMPLETE"
+  },
+  {
+    "number": 1,
+    "value": 0.7743603926248199,
+    "params": {
+      "batch_size": 8,
+      "lr": 0.0001716,
+      "lr_warmup": 0,
+      "weight_decay": 0,
+      "gcn_type": "adaptive",
+      "gcn_layers": 3,
+      "attention_heads": 12,
+      "epochs": 27
+    },
+    "state": "COMPLETE"
+  },
+  {
+    "number": 2,
+    "value": 0.7870437835216384,
+    "params": {
+      "batch_size": 4,
+      "lr": 0.0001234,
+      "lr_warmup": 0.1,
+      "weight_decay": 0.001,
+      "gcn_type": "gatv2",
+      "gcn_layers": 2,
+      "attention_heads": 8,
+      "hidden_dim": 512,
+      "gcn_dim": 768,
+      "epochs": 45
+    },
+    "state": "COMPLETE"
+  },
+  {
+    "number": 3,
+    "value": 0.7758792295910553,
+    "params": {
+      "batch_size": 8,
+      "lr": 0.0003456,
+      "lr_warmup": 0.05,
+      "weight_decay": 0.0005,
+      "gcn_type": "improved",
+      "gcn_layers": 3,
+      "attention_heads": 16,
+      "hidden_dim": 768,
+      "gcn_dim": 1024,
+      "epochs": 60
+    },
+    "state": "COMPLETE"
+  },
+  {
+    "number": 4,
+    "value": 0.7599841641896126,
+    "params": {
+      "batch_size": 12,
+      "lr": 9.87e-05,
+      "lr_warmup": 0.15,
+      "weight_decay": 0.01,
+      "gcn_type": "hybrid",
+      "gcn_layers": 4,
+      "attention_heads": 12,
+      "hidden_dim": 768,
+      "gcn_dim": 768,
+      "epochs": 80
+    },
+    "state": "COMPLETE"
+  }
+]

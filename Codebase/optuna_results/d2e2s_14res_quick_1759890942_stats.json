@@ -1,0 +1,22 @@
+{
+  "optimization_strategy": "quick",
+  "sampler_type": "tpe",
+  "use_pruning": true,
+  "total_trials": 2,
+  "completed_trials": 2,
+  "pruned_trials": 0,
+  "failed_trials": 0,
+  "success_rate": 1.0,
+  "pruning_rate": 0.0,
+  "best_value": -1.0,
+  "best_params": {
+    "batch_size": 8,
+    "lr": 1.6890755796561233e-05,
+    "lr_warmup": 0,
+    "weight_decay": 0,
+    "gcn_type": "hybrid",
+    "gcn_layers": 3,
+    "attention_heads": 8,
+    "epochs": 34
+  }
+}

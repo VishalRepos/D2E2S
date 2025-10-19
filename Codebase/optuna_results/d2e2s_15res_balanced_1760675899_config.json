@@ -1,0 +1,66 @@
+{
+  "study_name": "d2e2s_15res_balanced_1760675899",
+  "dataset": "15res",
+  "n_trials": 5,
+  "param_combinations": [
+    {
+      "batch_size": 16,
+      "lr": 0.0002026,
+      "lr_warmup": 0,
+      "weight_decay": 0.0002975,
+      "gcn_type": "hybrid",
+      "gcn_layers": 2,
+      "attention_heads": 8,
+      "hidden_dim": 768,
+      "gcn_dim": 512,
+      "epochs": 112
+    },
+    {
+      "batch_size": 8,
+      "lr": 0.0001716,
+      "lr_warmup": 0,
+      "weight_decay": 0,
+      "gcn_type": "adaptive",
+      "gcn_layers": 3,
+      "attention_heads": 12,
+      "epochs": 27
+    },
+    {
+      "batch_size": 4,
+      "lr": 2.146e-06,
+      "lr_warmup": 0,
+      "weight_decay": 0.0218,
+      "gcn_type": "gatv2",
+      "gcn_layers": 2,
+      "attention_heads": 4,
+      "hidden_dim": 512,
+      "gcn_dim": 768,
+      "epochs": 64
+    },
+    {
+      "batch_size": 32,
+      "lr": 0.0003046,
+      "lr_warmup": 0,
+      "weight_decay": 0.0007679,
+      "gcn_type": "hybrid",
+      "gcn_layers": 3,
+      "attention_heads": 4,
+      "hidden_dim": 512,
+      "gcn_dim": 1024,
+      "epochs": 82
+    },
+    {
+      "batch_size": 8,
+      "lr": 0.0005469,
+      "lr_warmup": 0,
+      "weight_decay": 0.0001117,
+      "gcn_type": "gatv2",
+      "gcn_layers": 4,
+      "attention_heads": 16,
+      "hidden_dim": 512,
+      "gcn_dim": 768,
+      "epochs": 22
+    }
+  ],
+  "created_at": "2025-10-17 10:08:19"
+}

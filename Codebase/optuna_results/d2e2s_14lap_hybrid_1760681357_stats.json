@@ -1,0 +1,31 @@
+{
+  "optimization_strategy": "hybrid_focused_laptop",
+  "sampler_type": "tpe",
+  "use_pruning": true,
+  "total_trials": 5,
+  "completed_trials": 5,
+  "pruned_trials": 0,
+  "failed_trials": 0,
+  "success_rate": 1.0,
+  "pruning_rate": 0.0,
+  "best_value": 0.8294323072112034,
+  "best_params": {
+    "batch_size": 6,
+    "lr": 0.000156,
+    "lr_warmup": 0.12,
+    "weight_decay": 0.0012,
+    "gcn_type": "hybrid",
+    "gcn_layers": 2,
+    "attention_heads": 16,
+    "hidden_dim": 1024,
+    "gcn_dim": 768,
+    "epochs": 40
+  },
+  "specifications": {
+    "gcn_type": "hybrid",
+    "batch_size": 6,
+    "epochs": 40,
+    "status": "production_ready",
+    "domain": "laptop_reviews"
+  }
+}

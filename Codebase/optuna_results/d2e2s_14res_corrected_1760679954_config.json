@@ -1,0 +1,67 @@
+{
+  "study_name": "d2e2s_14res_corrected_1760679954",
+  "dataset": "14res",
+  "n_trials": 5,
+  "param_combinations": [
+    {
+      "batch_size": 6,
+      "lr": 0.000189,
+      "lr_warmup": 0.08,
+      "weight_decay": 0.0008,
+      "gcn_type": "hybrid",
+      "gcn_layers": 2,
+      "attention_heads": 10,
+      "hidden_dim": 768,
+      "gcn_dim": 512,
+      "epochs": 40
+    },
+    {
+      "batch_size": 8,
+      "lr": 0.0001716,
+      "lr_warmup": 0,
+      "weight_decay": 0,
+      "gcn_type": "adaptive",
+      "gcn_layers": 3,
+      "attention_heads": 12,
+      "epochs": 27
+    },
+    {
+      "batch_size": 12,
+      "lr": 0.0001456,
+      "lr_warmup": 0.1,
+      "weight_decay": 0.001,
+      "gcn_type": "improved",
+      "gcn_layers": 3,
+      "attention_heads": 8,
+      "hidden_dim": 768,
+      "gcn_dim": 768,
+      "epochs": 50
+    },
+    {
+      "batch_size": 4,
+      "lr": 0.0002134,
+      "lr_warmup": 0.05,
+      "weight_decay": 0.0005,
+      "gcn_type": "hybrid",
+      "gcn_layers": 4,
+      "attention_heads": 16,
+      "hidden_dim": 1024,
+      "gcn_dim": 768,
+      "epochs": 65
+    },
+    {
+      "batch_size": 10,
+      "lr": 0.0001789,
+      "lr_warmup": 0.12,
+      "weight_decay": 0.002,
+      "gcn_type": "gatv2",
+      "gcn_layers": 2,
+      "attention_heads": 12,
+      "hidden_dim": 768,
+      "gcn_dim": 1024,
+      "epochs": 45
+    }
+  ],
+  "created_at": "2025-10-17 11:15:54",
+  "note": "Corrected tuning to fix unrealistic -1.0% F1 score"
+}

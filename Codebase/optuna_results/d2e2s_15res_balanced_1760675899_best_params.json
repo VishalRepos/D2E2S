@@ -1,0 +1,16 @@
+{
+  "best_value": 0.8349368315201244,
+  "best_params": {
+    "batch_size": 8,
+    "lr": 0.0001716,
+    "lr_warmup": 0,
+    "weight_decay": 0,
+    "gcn_type": "adaptive",
+    "gcn_layers": 3,
+    "attention_heads": 12,
+    "epochs": 27
+  },
+  "n_trials": 5,
+  "study_name": "d2e2s_15res_balanced_1760675899",
+  "dataset": "15res"
+}

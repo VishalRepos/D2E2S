@@ -1,0 +1,18 @@
+{
+  "best_value": -1.0,
+  "best_params": {
+    "batch_size": 16,
+    "lr": 0.00020256076395200166,
+    "lr_warmup": 0,
+    "weight_decay": 0.00029754382517384044,
+    "gcn_type": "hybrid",
+    "gcn_layers": 2,
+    "attention_heads": 8,
+    "hidden_dim": 768,
+    "gcn_dim": 512,
+    "epochs": 112
+  },
+  "n_trials": 25,
+  "study_name": "d2e2s_14res_balanced_1759896139",
+  "dataset": "14res"
+}

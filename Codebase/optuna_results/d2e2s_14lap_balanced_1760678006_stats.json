@@ -1,0 +1,24 @@
+{
+  "optimization_strategy": "balanced",
+  "sampler_type": "tpe",
+  "use_pruning": true,
+  "total_trials": 5,
+  "completed_trials": 5,
+  "pruned_trials": 0,
+  "failed_trials": 0,
+  "success_rate": 1.0,
+  "pruning_rate": 0.0,
+  "best_value": 0.7870437835216384,
+  "best_params": {
+    "batch_size": 4,
+    "lr": 0.0001234,
+    "lr_warmup": 0.1,
+    "weight_decay": 0.001,
+    "gcn_type": "gatv2",
+    "gcn_layers": 2,
+    "attention_heads": 8,
+    "hidden_dim": 512,
+    "gcn_dim": 768,
+    "epochs": 45
+  }
+}

@@ -34,15 +34,15 @@ class SemGCN(nn.Module):
 
         for i in range(self.attention_heads):
             if adj_ag is None:
-                adj_ag = attn_adj_list[i]
+                adj_ag = attn_adj_list[i].clone()
             else:
-                adj_ag += attn_adj_list[i]
+                adj_ag = adj_ag + attn_adj_list[i]
         adj_ag_new = adj_ag.clone()
         adj_ag_new /= self.attention_heads
 
         for j in range(adj_ag_new.size(0)):
             adj_ag_new[j] -= torch.diag(torch.diag(adj_ag_new[j]))
-            adj_ag_new[j] += torch.eye(adj_ag_new[j].size(0)).cuda()
+            adj_ag_new[j] += torch.eye(adj_ag_new[j].size(0)).to(adj_ag_new.device)
         adj_ag_new = mask_ * adj_ag_new
 
         # gcn layer
