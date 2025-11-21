@@ -97,13 +97,14 @@ class D2E2S_Trainer(BaseTrainer):
             args=args,
         )
         model.to(args.device)
-        # create optimizer
+        # create optimizer (memory efficient)
         optimizer_params = self._get_optimizer_params(model)
         optimizer = AdamW(
             optimizer_params,
             lr=args.lr,
             weight_decay=args.weight_decay,
             correct_bias=False,
+            fused=True if torch.cuda.is_available() else False,  # Fused optimizer for memory efficiency
         )
         # create scheduler
         scheduler = transformers.get_linear_schedule_with_warmup(
@@ -189,9 +190,6 @@ class D2E2S_Trainer(BaseTrainer):
                 entity_sample_masks=batch["entity_sample_masks"],
                 senti_sample_masks=batch["senti_sample_masks"],
             )
-            
-            # Clear cache to free memory
-            torch.cuda.empty_cache()
 
             # logging
             iteration += 1

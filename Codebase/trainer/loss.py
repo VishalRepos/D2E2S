@@ -8,6 +8,8 @@ class D2E2SLoss():
         self._optimizer = optimizer
         self._scheduler = scheduler
         self._max_grad_norm = max_grad_norm
+        self._accumulation_steps = 4  # Accumulate gradients over 4 steps
+        self._current_step = 0
 
     def compute(self, entity_logits, senti_logits, batch_loss, entity_types, senti_types, entity_sample_masks, senti_sample_masks):
         # term loss
@@ -34,9 +36,18 @@ class D2E2SLoss():
         else:
             train_loss = entity_loss
 
+        # Scale loss for gradient accumulation
+        train_loss = train_loss / self._accumulation_steps
         train_loss.backward()
-        torch.nn.utils.clip_grad_norm_(self._model.parameters(), self._max_grad_norm)
-        self._optimizer.step()
-        self._scheduler.step()
-        self._model.zero_grad()
-        return train_loss.item()
+        
+        self._current_step += 1
+        
+        # Only update weights every accumulation_steps
+        if self._current_step % self._accumulation_steps == 0:
+            torch.nn.utils.clip_grad_norm_(self._model.parameters(), self._max_grad_norm)
+            self._optimizer.step()
+            self._scheduler.step()
+            self._model.zero_grad()
+            torch.cuda.empty_cache()  # Clear cache after optimizer step
+        
+        return train_loss.item() * self._accumulation_steps  # Return unscaled loss for logging
