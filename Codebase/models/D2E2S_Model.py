@@ -63,9 +63,7 @@ class D2E2SModel(PreTrainedModel):
         self.gcn_dropout = self.args.gcn_dropout
 
         # 2、DEBERT model
-        self.deberta = AutoModel.from_pretrained(
-            "microsoft/deberta-v2-xxlarge", config=config
-        )
+        self.deberta = AutoModel.from_config(config)
 
         # self.BertAdapterModel = BertAdapterModel(config)
         self.Syn_gcn = GCN(emb_dim=self.deberta_feature_dim, num_layers=self.args.num_layers, gcn_dropout=self.gcn_dropout)
