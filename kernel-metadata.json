@@ -1,0 +1,13 @@
+{
+  "id": "uom239364u/d2e2s-training",
+  "title": "D2E2S Training",
+  "code_file": "D2E2S_Simple_Training.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_internet": true,
+  "dataset_sources": [],
+  "competition_sources": [],
+  "kernel_sources": []
+}

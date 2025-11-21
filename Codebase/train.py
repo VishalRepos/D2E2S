@@ -96,6 +96,11 @@ class D2E2S_Trainer(BaseTrainer):
             entity_types=input_reader.entity_type_count,
             args=args,
         )
+        
+        # Enable gradient checkpointing for memory efficiency
+        if hasattr(model, 'gradient_checkpointing_enable'):
+            model.gradient_checkpointing_enable()
+        
         model.to(args.device)
         # create optimizer
         optimizer_params = self._get_optimizer_params(model)
@@ -189,6 +194,9 @@ class D2E2S_Trainer(BaseTrainer):
                 entity_sample_masks=batch["entity_sample_masks"],
                 senti_sample_masks=batch["senti_sample_masks"],
             )
+            
+            # Clear cache to free memory
+            torch.cuda.empty_cache()
 
             # logging
             iteration += 1

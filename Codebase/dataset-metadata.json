@@ -1,0 +1,16 @@
+{
+  "title": "D2E2S Codebase",
+  "id": "uom239364u/d2e2s-codebase",
+  "licenses": [
+    {
+      "name": "MIT"
+    }
+  ],
+  "keywords": [
+    "nlp",
+    "sentiment-analysis",
+    "absa",
+    "pytorch",
+    "gcn"
+  ]
+}
