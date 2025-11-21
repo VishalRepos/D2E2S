@@ -96,11 +96,6 @@ class D2E2S_Trainer(BaseTrainer):
             entity_types=input_reader.entity_type_count,
             args=args,
         )
-        
-        # Enable gradient checkpointing for memory efficiency
-        if hasattr(model, 'gradient_checkpointing_enable'):
-            model.gradient_checkpointing_enable()
-        
         model.to(args.device)
         # create optimizer
         optimizer_params = self._get_optimizer_params(model)
