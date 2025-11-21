@@ -104,7 +104,6 @@ class D2E2S_Trainer(BaseTrainer):
             lr=args.lr,
             weight_decay=args.weight_decay,
             correct_bias=False,
-            fused=True if torch.cuda.is_available() else False,  # Fused optimizer for memory efficiency
         )
         # create scheduler
         scheduler = transformers.get_linear_schedule_with_warmup(
