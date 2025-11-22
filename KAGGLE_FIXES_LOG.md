@@ -1,5 +1,45 @@
 # Kaggle Training Fixes - Change Log
 
+## Fix 8: Default hidden_dim Parameter (2025-11-22 16:50)
+
+### Issue Found
+Debug output showed:
+```
+hidden_dim: 768  ← Using default, not command line parameter!
+hidden_dim * 2 (bidirectional): 1536
+```
+
+The `--hidden_dim 384` parameter in the notebook was being **ignored**.
+
+### Root Cause
+Command line parameters weren't overriding the default value in `Parameter_Improved.py`.
+
+### Solution
+Changed the default value in `Parameter_Improved.py`:
+```python
+# Before
+"--hidden_dim", type=int, default=768
+
+# After  
+"--hidden_dim", type=int, default=384
+```
+
+### Commit
+`b481af6` - "Fix: Change default hidden_dim to 384 for deberta-v3-base"
+
+### Expected Result
+- `hidden_dim: 384`
+- `hidden_dim * 2: 768` (matches GCN input)
+- No more dimension mismatch errors
+
+### Testing
+- [ ] Restart Kaggle kernel
+- [ ] Run All
+- [ ] Verify debug shows `hidden_dim: 384`
+- [ ] Verify training starts successfully
+
+---
+
 ## Current State (2025-11-22 16:43)
 
 ### Issue
