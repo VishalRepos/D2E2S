@@ -92,7 +92,7 @@ def train_argparser_improved():
         "--use_gated", default=False, help="Do use gcnconv and gatedgraphconv."
     )
     parser.add_argument(
-        "--hidden_dim", type=int, default=768, help="hidden layer dimension."
+        "--hidden_dim", type=int, default=384, help="hidden layer dimension (384 for deberta-v3-base bidirectional → 768)."
     )
     parser.add_argument(
         "--emb_dim", type=int, default=1536, help="Word embedding dimension."
