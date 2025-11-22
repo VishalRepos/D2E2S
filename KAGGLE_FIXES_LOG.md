@@ -1,5 +1,45 @@
 # Kaggle Training Fixes - Change Log
 
+## Fix 9: Model Collapse at Epoch 49 (2025-11-22 17:53)
+
+### Issue
+Model trains normally until epoch 48, then suddenly all predictions become 0 at epoch 49:
+```
+Epoch 48: F1=41.83%, Precision=53.92%, Recall=34.16%  ✓
+Epoch 49: F1=0.00%, Precision=0.00%, Recall=0.00%     ✗
+```
+
+### Root Cause
+**Gradient explosion** causing NaN/Inf values in:
+- Loss values
+- Gradients
+- Model weights
+
+This causes the model to output all zeros.
+
+### Solution
+Added NaN/Inf detection and handling in `trainer/loss.py`:
+
+1. **Check loss for NaN/Inf** before backward pass
+2. **Check gradients for NaN/Inf** before optimizer step
+3. **Skip problematic batches** instead of corrupting the model
+4. **Print warnings** when NaN detected
+
+### Additional Recommendations
+1. **Reduce learning rate**: `0.00005` (from `0.0001716`)
+2. **Stricter gradient clipping**: `--max_grad_norm 0.5` (from `1.0`)
+
+### Commit
+`a1bd817` - "Fix: Add NaN/Inf detection and handling to prevent model collapse"
+
+### Testing
+- [ ] Re-run training on Kaggle
+- [ ] Monitor for NaN warnings
+- [ ] Verify training continues past epoch 49
+- [ ] Check if F1 score remains stable
+
+---
+
 ## Fix 8: Default hidden_dim Parameter (2025-11-22 16:50)
 
 ### Issue Found
