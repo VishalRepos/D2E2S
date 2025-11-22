@@ -36,6 +36,14 @@ class D2E2SLoss():
         else:
             train_loss = entity_loss
 
+        # Check for NaN/Inf
+        if torch.isnan(train_loss) or torch.isinf(train_loss):
+            print(f"⚠️ WARNING: Loss is NaN/Inf! Skipping this batch.")
+            print(f"  entity_loss: {entity_loss.item()}")
+            print(f"  senti_loss: {senti_loss.item() if senti_count.item() != 0 else 'N/A'}")
+            print(f"  batch_loss: {batch_loss.item()}")
+            return 0.0  # Return 0 to skip this batch
+
         # Scale loss for gradient accumulation
         train_loss = train_loss / self._accumulation_steps
         train_loss.backward()
@@ -44,6 +52,20 @@ class D2E2SLoss():
         
         # Only update weights every accumulation_steps
         if self._current_step % self._accumulation_steps == 0:
+            # Check for NaN gradients before clipping
+            has_nan_grad = False
+            for name, param in self._model.named_parameters():
+                if param.grad is not None:
+                    if torch.isnan(param.grad).any() or torch.isinf(param.grad).any():
+                        print(f"⚠️ WARNING: NaN/Inf gradient in {name}")
+                        has_nan_grad = True
+                        break
+            
+            if has_nan_grad:
+                print("⚠️ Skipping optimizer step due to NaN gradients")
+                self._model.zero_grad()
+                return 0.0
+            
             torch.nn.utils.clip_grad_norm_(self._model.parameters(), self._max_grad_norm)
             self._optimizer.step()
             self._scheduler.step()
