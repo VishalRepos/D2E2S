@@ -75,6 +75,18 @@ class D2E2S_Trainer(BaseTrainer):
     ):
         args = self.args
 
+        # DEBUG: Print critical dimensions
+        print("="*60)
+        print("🔍 DIMENSION DEBUG:")
+        print(f"  Model: {args.pretrained_deberta_name}")
+        print(f"  emb_dim: {args.emb_dim}")
+        print(f"  hidden_dim: {args.hidden_dim}")
+        print(f"  hidden_dim * 2 (bidirectional): {args.hidden_dim * 2}")
+        print(f"  deberta_feature_dim: {args.deberta_feature_dim}")
+        print(f"  gcn_dim: {args.gcn_dim}")
+        print(f"  mem_dim: {args.mem_dim}")
+        print("="*60)
+
         # set seed
         set_seed(args.seed)
 
