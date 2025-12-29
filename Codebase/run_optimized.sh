@@ -1,5 +1,6 @@
 #!/bin/bash
-# Optimized training with reduced dimensions, higher LR, and aggressive augmentation
+# Optimized training with Focal Loss, Label Smoothing, and aggressive augmentation
+# Keep dimensions at 768 to avoid architecture mismatch
 python ./train.py \
     --dataset 14res \
     --batch_size 12 \
@@ -9,10 +10,10 @@ python ./train.py \
     --attention_heads 8 \
     --pretrained_deberta_name microsoft/deberta-v3-base \
     --emb_dim 768 \
-    --hidden_dim 256 \
+    --hidden_dim 384 \
     --deberta_feature_dim 768 \
-    --gcn_dim 512 \
-    --mem_dim 512 \
+    --gcn_dim 768 \
+    --mem_dim 768 \
     --sampling_processes 8 \
     --lr_warmup 0.3 \
     --weight_decay 0.01 \
