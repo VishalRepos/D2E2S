@@ -171,7 +171,13 @@ class D2E2SModel(PreTrainedModel):
         # encoder layer
         # h = self.BertAdapterModel(input_ids=encodings, attention_mask=self.context_masks)[0]
         h = self.deberta(input_ids=encodings, attention_mask=self.context_masks)[0]
-        self.output, _ = self.lstm(h, self.hidden)
+        
+        # Dynamically create hidden state for current batch size (training)
+        hidden = (
+            torch.zeros(self.layers * self.number, batch_size, self._hidden_dim).to(h.device),
+            torch.zeros(self.layers * self.number, batch_size, self._hidden_dim).to(h.device)
+        )
+        self.output, _ = self.lstm(h, hidden)
         self.deberta_lstm_output = self.lstm_dropout(self.output)
         self.deberta_lstm_att_feature = self.deberta_lstm_output
 
@@ -239,7 +245,13 @@ class D2E2SModel(PreTrainedModel):
         # encoder layer
         # h = self.BertAdapterModel(input_ids=encodings, attention_mask=self.context_masks)[0]
         h = self.deberta(input_ids=encodings, attention_mask=self.context_masks)[0]
-        self.output, _ = self.lstm(h, self.hidden)
+        
+        # Dynamically create hidden state for current batch size (eval)
+        hidden = (
+            torch.zeros(self.layers * self.number, batch_size, self._hidden_dim).to(h.device),
+            torch.zeros(self.layers * self.number, batch_size, self._hidden_dim).to(h.device)
+        )
+        self.output, _ = self.lstm(h, hidden)
         self.deberta_lstm_output = self.lstm_dropout(self.output)
         self.deberta_lstm_att_feature = self.deberta_lstm_output
 
