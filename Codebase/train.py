@@ -149,6 +149,14 @@ class D2E2S_Trainer(BaseTrainer):
             if not args.final_eval or (epoch == args.epochs - 1):
                 # print(epoch)
                 self._eval(model, test_dataset, input_reader, epoch + 1, updates_epoch)
+        
+        # Log best results at end of training
+        print("\n" + "="*80)
+        print("🏆 TRAINING COMPLETE - BEST RESULTS")
+        print("="*80)
+        print(f"Best Epoch: {self.best_epoch}")
+        print(f"Best Triplet F1: {self.max_pair_f1:.2f}%")
+        print("="*80 + "\n")
 
     def train_epoch(
         self,
