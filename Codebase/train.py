@@ -42,6 +42,20 @@ class D2E2S_Trainer(BaseTrainer):
         self.result_path = os.path.join(
             self._log_path_result, "result{}.txt".format(self.args.max_span_size)
         )
+        
+        # Create training log markdown file
+        self.training_log_path = os.path.join(self._log_path_result, "training_log.md")
+        with open(self.training_log_path, 'w') as f:
+            f.write(f"🚀 Starting training with parameters:\n")
+            f.write(f"  - Model: {args.pretrained_deberta_name}\n")
+            f.write(f"  - emb_dim: {args.emb_dim}\n")
+            f.write(f"  - hidden_dim: {args.hidden_dim}\n")
+            f.write(f"  - deberta_feature_dim: {args.deberta_feature_dim}\n")
+            f.write(f"  - gcn_dim: {args.gcn_dim}\n")
+            f.write(f"  - Learning Rate: {args.lr}\n")
+            f.write(f"  - Batch Size: {args.batch_size}\n")
+            f.write(f"  - Epochs: {args.epochs}\n")
+            f.write("="*60 + "\n\n")
 
     def _preprocess(self, args, input_reader_cls, types_path, train_path, test_path):
 
@@ -157,6 +171,16 @@ class D2E2S_Trainer(BaseTrainer):
         print(f"Best Epoch: {self.best_epoch}")
         print(f"Best Triplet F1: {self.max_pair_f1:.2f}%")
         print("="*80 + "\n")
+        
+        # Log to markdown file
+        with open(self.training_log_path, 'a') as f:
+            f.write("\n" + "="*60 + "\n")
+            f.write("🏆 TRAINING COMPLETE - BEST RESULTS\n")
+            f.write("="*60 + "\n")
+            f.write(f"Best Epoch: {self.best_epoch}\n")
+            f.write(f"Best Triplet F1: {self.max_pair_f1:.2f}%\n")
+            f.write("="*60 + "\n")
+            f.write(f"\nTraining log saved to: {self.training_log_path}\n")
 
     def train_epoch(
         self,
@@ -354,6 +378,15 @@ class D2E2S_Trainer(BaseTrainer):
                 senti_dic[columns[inx]] = val
             self.max_pair_f1 = f1
             self.best_epoch = epoch  # Update best epoch
+            
+            # Log to markdown file
+            with open(self.training_log_path, 'a') as f:
+                f.write(f"\n📊 Epoch {epoch} - NEW BEST F1: {f1:.2f}%\n")
+                f.write(f"  - Precision: {senti_eval[0]:.2f}%\n")
+                f.write(f"  - Recall: {senti_eval[1]:.2f}%\n")
+                f.write(f"  - F1 Score: {senti_eval[2]:.2f}%\n")
+                f.write("-"*60 + "\n")
+            
             with open(self.result_path, mode="a", encoding="utf-8") as f:
                 w_str = "No. {} ：....\n".format(epoch)
                 f.write(w_str)
