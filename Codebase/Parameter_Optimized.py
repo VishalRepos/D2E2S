@@ -217,6 +217,10 @@ def train_argparser_optimized():
         help="Store predictions"
     )
     parser.add_argument(
+        "--example_count", type=int, default=10,
+        help="Number of examples to store"
+    )
+    parser.add_argument(
         "--init_eval", action="store_true", default=False,
         help="Evaluate before training"
     )
