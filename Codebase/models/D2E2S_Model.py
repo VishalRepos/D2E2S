@@ -105,29 +105,24 @@ class D2E2SModel(PreTrainedModel):
             self.fc = nn.Linear(int(self._hidden_dim), self.output_size)
 
         # 5、init_hidden
-        weight = next(self.parameters()).data
+        # Use torch.zeros instead of weight.new to avoid meta tensor issues
         if self._is_bidirectional:
             self.number = 2
 
         if self.USE_CUDA:
             self.hidden = (
-                weight.new(self.layers * self.number, self.batch_size, self._hidden_dim)
-                .zero_()
+                torch.zeros(self.layers * self.number, self.batch_size, self._hidden_dim)
                 .float()
                 .cuda(),
-                # self.hidden = 384
-                weight.new(self.layers * self.number, self.batch_size, self._hidden_dim)
-                .zero_()
+                torch.zeros(self.layers * self.number, self.batch_size, self._hidden_dim)
                 .float()
                 .cuda(),
             )
         else:
             self.hidden = (
-                weight.new(self.layers * self.number, self.batch_size, self._hidden_dim)
-                .zero_()
+                torch.zeros(self.layers * self.number, self.batch_size, self._hidden_dim)
                 .float(),
-                weight.new(self.layers * self.number, self.batch_size, self._hidden_dim)
-                .zero_()
+                torch.zeros(self.layers * self.number, self.batch_size, self._hidden_dim)
                 .float(),
             )
 
