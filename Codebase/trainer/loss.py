@@ -41,7 +41,7 @@ class D2E2SLoss():
         entity_sample_masks = entity_sample_masks.view(-1).float()
 
         entity_loss = self._entity_criterion(entity_logits, entity_types)
-        entity_loss = (entity_loss * entity_sample_masks).sum() / entity_sample_masks.sum()
+        entity_loss = (entity_loss * entity_sample_masks).sum() / (entity_sample_masks.sum() + 1e-8)  # Add epsilon
 
         # sentiment loss with label smoothing
         senti_sample_masks = senti_sample_masks.view(-1).float()
@@ -56,20 +56,26 @@ class D2E2SLoss():
 
             senti_loss = self._senti_criterion(senti_logits, senti_types_smooth)
             senti_loss = senti_loss.sum(-1) / senti_loss.shape[-1]
-            senti_loss = (senti_loss * senti_sample_masks).sum() / senti_count
+            senti_loss = (senti_loss * senti_sample_masks).sum() / (senti_count + 1e-8)  # Add epsilon
 
-            train_loss = entity_loss + senti_loss + 10*batch_loss
+            # Reduce batch_loss multiplier from 10 to 1 to prevent explosion
+            train_loss = entity_loss + senti_loss + batch_loss
         else:
             train_loss = entity_loss
+            senti_loss = torch.tensor(0.0).to(entity_loss.device)
 
-        # Check for NaN/Inf
+        # Check for NaN/Inf before backward
         if torch.isnan(train_loss) or torch.isinf(train_loss):
             print(f"⚠️ WARNING: Loss is NaN/Inf! Skipping this batch.")
-            print(f"  entity_loss: {entity_loss.item()}")
-            print(f"  senti_loss: {senti_loss.item() if senti_count.item() != 0 else 'N/A'}")
+            print(f"  entity_loss: {entity_loss.item() if not torch.isnan(entity_loss) else 'nan'}")
+            print(f"  senti_loss: {senti_loss.item() if not torch.isnan(senti_loss) else 'nan'}")
             print(f"  batch_loss: {batch_loss if isinstance(batch_loss, float) else batch_loss.item()}")
-            return 0.0  # Return 0 to skip this batch
+            self._model.zero_grad()  # Clear gradients
+            return torch.tensor(0.0).to(entity_loss.device)  # Return tensor, not float
 
+        # Clip loss to prevent explosion
+        train_loss = torch.clamp(train_loss, max=100.0)
+        
         # Scale loss for gradient accumulation
         train_loss = train_loss / self._accumulation_steps
         train_loss.backward()
