@@ -64,8 +64,12 @@ def train_argparser_optimized():
     
     # Training configuration
     parser.add_argument(
-        "--batch_size", type=int, default=16,
-        help="Batch size (OLD: 16)"
+        "--batch_size", type=int, default=4,
+        help="Batch size (reduced to 4 for memory, use gradient_accumulation_steps=4 to simulate 16)"
+    )
+    parser.add_argument(
+        "--gradient_accumulation_steps", type=int, default=4,
+        help="Gradient accumulation steps (4 steps * batch 4 = effective batch 16)"
     )
     parser.add_argument(
         "--epochs", type=int, default=120,

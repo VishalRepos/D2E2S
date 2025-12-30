@@ -132,6 +132,7 @@ class D2E2S_Trainer(BaseTrainer):
             optimizer,
             scheduler,
             args.max_grad_norm,
+            args.gradient_accumulation_steps,
         )
         # eval validation set
         if args.init_eval:

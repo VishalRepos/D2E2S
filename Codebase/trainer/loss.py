@@ -21,7 +21,7 @@ class FocalLoss(torch.nn.Module):
         return focal_loss
 
 class D2E2SLoss():
-    def __init__(self, senti_criterion, entity_criterion, model, optimizer, scheduler, max_grad_norm):
+    def __init__(self, senti_criterion, entity_criterion, model, optimizer, scheduler, max_grad_norm, accumulation_steps=4):
         self._senti_criterion = senti_criterion
         # Replace entity criterion with Focal Loss for better class imbalance handling
         self._entity_criterion = FocalLoss(alpha=0.25, gamma=2.0, reduction='none')
@@ -30,7 +30,7 @@ class D2E2SLoss():
         self._optimizer = optimizer
         self._scheduler = scheduler
         self._max_grad_norm = max_grad_norm
-        self._accumulation_steps = 4  # Accumulate gradients over 4 steps
+        self._accumulation_steps = accumulation_steps  # Use parameter instead of hardcoded
         self._current_step = 0
         self._label_smoothing = 0.1  # Label smoothing factor
 
