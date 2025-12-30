@@ -42,24 +42,24 @@ def train_argparser_optimized():
     )
 
     # CRITICAL: Learning rate
-    parser.add_argument("--lr", type=float, default=1e-5, help="Learning rate (for deberta-v3-large)")
+    parser.add_argument("--lr", type=float, default=5e-5, help="Learning rate (for deberta-v3-base)")
     
-    # Model configuration - deberta-v3-large (fits in 16GB GPU)
+    # Model configuration - deberta-v3-base (minimal memory)
     parser.add_argument(
-        "--pretrained_deberta_name", default="microsoft/deberta-v3-large", type=str,
-        help="Use large model (434M params) - fits in memory"
+        "--pretrained_deberta_name", default="microsoft/deberta-v3-base", type=str,
+        help="Use base model (184M params) - minimal memory"
     )
     parser.add_argument(
-        "--deberta_feature_dim", type=int, default=1024,
-        help="large output dimension"
+        "--deberta_feature_dim", type=int, default=768,
+        help="base output dimension"
     )
     parser.add_argument(
-        "--hidden_dim", type=int, default=512,
-        help="Hidden dimension for large model"
+        "--hidden_dim", type=int, default=384,
+        help="Hidden dimension for base model"
     )
     parser.add_argument(
-        "--emb_dim", type=int, default=1024,
-        help="Embedding dimension matching large"
+        "--emb_dim", type=int, default=768,
+        help="Embedding dimension matching base"
     )
     
     # Training configuration
@@ -108,7 +108,7 @@ def train_argparser_optimized():
         help="GCN layers (OLD: 2)"
     )
     parser.add_argument(
-        "--gcn_dim", type=int, default=512,
+        "--gcn_dim", type=int, default=384,
         help="GCN dimension (matching hidden_dim)"
     )
     parser.add_argument(
