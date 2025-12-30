@@ -41,35 +41,35 @@ def train_argparser_optimized():
         "--dataset", default="14res", type=str, help="14res, 15res, 16res, 14lap"
     )
 
-    # CRITICAL: Learning rate - 60x lower than previous attempts
-    parser.add_argument("--lr", type=float, default=5e-6, help="Learning rate (OLD CODEBASE: 5e-6)")
+    # CRITICAL: Learning rate
+    parser.add_argument("--lr", type=float, default=1e-5, help="Learning rate (for deberta-v3-large)")
     
-    # Model configuration - matching old codebase
+    # Model configuration - deberta-v3-large (fits in 16GB GPU)
     parser.add_argument(
-        "--pretrained_deberta_name", default="microsoft/deberta-v2-xxlarge", type=str,
-        help="Use xxlarge model (1.5B params) like old codebase"
+        "--pretrained_deberta_name", default="microsoft/deberta-v3-large", type=str,
+        help="Use large model (434M params) - fits in memory"
     )
     parser.add_argument(
-        "--deberta_feature_dim", type=int, default=1536,
-        help="xxlarge output dimension (OLD: 1536)"
+        "--deberta_feature_dim", type=int, default=1024,
+        help="large output dimension"
     )
     parser.add_argument(
-        "--hidden_dim", type=int, default=768,
-        help="Hidden dimension (OLD: 768)"
+        "--hidden_dim", type=int, default=512,
+        help="Hidden dimension for large model"
     )
     parser.add_argument(
-        "--emb_dim", type=int, default=1536,
-        help="Embedding dimension matching xxlarge (OLD: 1536)"
+        "--emb_dim", type=int, default=1024,
+        help="Embedding dimension matching large"
     )
     
     # Training configuration
     parser.add_argument(
-        "--batch_size", type=int, default=4,
-        help="Batch size (reduced to 4 for memory, use gradient_accumulation_steps=4 to simulate 16)"
+        "--batch_size", type=int, default=16,
+        help="Batch size (restored to 16 for large model)"
     )
     parser.add_argument(
-        "--gradient_accumulation_steps", type=int, default=4,
-        help="Gradient accumulation steps (4 steps * batch 4 = effective batch 16)"
+        "--gradient_accumulation_steps", type=int, default=1,
+        help="No gradient accumulation needed for large model"
     )
     parser.add_argument(
         "--epochs", type=int, default=120,
@@ -108,8 +108,8 @@ def train_argparser_optimized():
         help="GCN layers (OLD: 2)"
     )
     parser.add_argument(
-        "--gcn_dim", type=int, default=768,
-        help="GCN dimension"
+        "--gcn_dim", type=int, default=512,
+        help="GCN dimension (matching hidden_dim)"
     )
     parser.add_argument(
         "--attention_heads", default=8, type=int,
