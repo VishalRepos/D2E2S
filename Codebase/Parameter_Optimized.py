@@ -42,7 +42,7 @@ def train_argparser_optimized():
     )
 
     # CRITICAL: Learning rate
-    parser.add_argument("--lr", type=float, default=3e-5, help="Learning rate (reduced to prevent NaN)")
+    parser.add_argument("--lr", type=float, default=1e-5, help="Learning rate (conservative to prevent NaN)")
     
     # Model configuration - deberta-v3-base (minimal memory)
     parser.add_argument(
