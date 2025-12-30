@@ -238,5 +238,8 @@ def train_argparser_optimized():
     args.test_path = dataset_files[args.dataset]["test"]
     args.types_path = dataset_files[args.dataset]["types_path"]
     args.dataset_file = dataset_files[args.dataset]
+    
+    # Set device
+    args.device = torch.device("cuda" if torch.cuda.is_available() and not args.cpu else "cpu")
 
     return args
