@@ -94,8 +94,12 @@ def train_argparser_optimized():
         help="LSTM dropout"
     )
     parser.add_argument(
-        "--prop_drop", type=float, default=0.05,
-        help="Classifier dropout (OLD: 0.05)"
+        "--prop_drop", type=float, default=0.1,
+        help="Classifier dropout (increased for enhanced DeBERTa)"
+    )
+    parser.add_argument(
+        "--use_enhanced_deberta", type=bool, default=True,
+        help="Use enhanced DeBERTa with better dropout and layer norm"
     )
     parser.add_argument(
         "--gcn_dropout", type=float, default=0.1,

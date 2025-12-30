@@ -7,6 +7,7 @@ from models.Syn_GCN import GCN
 from models.Sem_GCN import SemGCN
 from models.Attention_Module import SelfAttention
 from models.TIN_GCN import TIN, FeatureStacking
+from models.Enhanced_DeBERTa import MinimalEnhancedDeBERTa
 import torch.nn.functional as F
 import numpy as np
 from sklearn.manifold import TSNE
@@ -16,7 +17,6 @@ from transformers import PreTrainedModel
 from transformers import AutoConfig, AutoModel
 
 USE_CUDA = torch.cuda.is_available()
-
 
 def get_token(h: torch.tensor, x: torch.tensor, token: int):
     """Get specific token embedding (e.g. [CLS])"""
@@ -62,8 +62,12 @@ class D2E2SModel(PreTrainedModel):
         self.gcn_dim = self.args.gcn_dim
         self.gcn_dropout = self.args.gcn_dropout
 
-        # 2、DEBERT model
-        self.deberta = AutoModel.from_config(config)
+        # 2、DEBERT model with enhancements
+        # Use MinimalEnhancedDeBERTa for better dropout and layer normalization
+        self.deberta = MinimalEnhancedDeBERTa(
+            config, 
+            enhanced_dropout=self.args.prop_drop  # Use same dropout as model
+        )
 
         # self.BertAdapterModel = BertAdapterModel(config)
         self.Syn_gcn = GCN(emb_dim=self.deberta_feature_dim, num_layers=self.args.num_layers, gcn_dropout=self.gcn_dropout)
