@@ -67,7 +67,7 @@ class D2E2SLoss():
             print(f"⚠️ WARNING: Loss is NaN/Inf! Skipping this batch.")
             print(f"  entity_loss: {entity_loss.item()}")
             print(f"  senti_loss: {senti_loss.item() if senti_count.item() != 0 else 'N/A'}")
-            print(f"  batch_loss: {batch_loss.item()}")
+            print(f"  batch_loss: {batch_loss if isinstance(batch_loss, float) else batch_loss.item()}")
             return 0.0  # Return 0 to skip this batch
 
         # Scale loss for gradient accumulation
