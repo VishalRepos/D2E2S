@@ -27,13 +27,14 @@ class BaseTrainer:
         self._log_path_result = os.path.join(self._log_path,"result")
         self._log_path_predict = os.path.join(self._log_path, "predict")
 
+        # Initialize tensorboard writer
+        self._summary_writer = tensorboardX.SummaryWriter(self._log_path) if tensorboardX is not None else None
+
         if hasattr(args, 'save_path'):
             # print(self.args.label+name)
             self._save_path = os.path.join(self.args.save_path, self.args.label+name)
             # print(self._save_path)
             util.create_directories_dir(self._save_path)
-            # tensorboard summary
-            self._summary_writer = tensorboardX.SummaryWriter(self._log_path) if tensorboardX is not None else None
 
     def _save_best(self, model: PreTrainedModel, tokenizer: PreTrainedTokenizer, optimizer: optimizer,
                    accuracy: float, iteration: int, label: str, extra=None):
