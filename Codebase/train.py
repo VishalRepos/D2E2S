@@ -12,7 +12,7 @@ from tqdm import tqdm
 from transformers import AdamW
 from transformers import AutoTokenizer, AutoConfig
 
-from Parameter_Improved import train_argparser_improved as train_argparser
+from Parameter_Optimized import train_argparser_optimized as train_argparser
 from models.D2E2S_Model import D2E2SModel
 from models.General import set_seed
 from trainer import util, sampling
